@@ -1,3 +1,7 @@
+GTAGS
+GPATH
+GRTAGS
+
 # Ignore editor artefacts
 /.dir-locals.el
 
