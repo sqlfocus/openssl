@@ -176,6 +176,8 @@ int ossl_statem_skip_early_data(SSL *s)
  * attempting to read data (SSL_read*()), or -1 if we are in SSL_do_handshake()
  * or similar.
  */
+/* 判断是否需要握手协商
+   @param send: 1/0/-1代表调用者分别为 SSL_write*()/SSL_read*()/SSL_do_handshake() */
 void ossl_statem_check_finish_init(SSL *s, int send)
 {
     if (send == -1) {
@@ -224,11 +226,13 @@ void ossl_statem_set_hello_verify_done(SSL *s)
     s->statem.hand_state = TLS_ST_SR_CLNT_HELLO;
 }
 
+/* 客户端的connect方法 */
 int ossl_statem_connect(SSL *s)
 {
     return state_machine(s, 0);
 }
 
+/* 服务器端的accept方法 */
 int ossl_statem_accept(SSL *s)
 {
     return state_machine(s, 1);
@@ -249,7 +253,7 @@ static info_cb get_callback(SSL *s)
 /*
  * The main message flow state machine. We start in the MSG_FLOW_UNINITED or
  * MSG_FLOW_FINISHED state and finish in MSG_FLOW_FINISHED. Valid states and
- * transitions are as follows:
+ * transitions are as follows: 主状态机跳转
  *
  * MSG_FLOW_UNINITED     MSG_FLOW_FINISHED
  *        |                       |
@@ -270,10 +274,10 @@ static info_cb get_callback(SSL *s)
  * In addition to the above there is also the MSG_FLOW_ERROR state. We can move
  * into that state at any point in the event that an irrecoverable error occurs.
  *
- * Valid return values are:
+ * Valid return values are:    返回值，1代表成功
  *   1: Success
  * <=0: NBIO or error
- */
+ *//* 握手过程的主入口函数 */
 static int state_machine(SSL *s, int server)
 {
     BUF_MEM *buf = NULL;
@@ -294,9 +298,9 @@ static int state_machine(SSL *s, int server)
 
     cb = get_callback(s);
 
-    st->in_handshake++;
+    st->in_handshake++;                /* 握手计数 */
     if (!SSL_in_init(s) || SSL_in_before(s)) {
-        if (!SSL_clear(s))
+        if (!SSL_clear(s))             /* 程序初始启动，清理握手信息 */
             return -1;
     }
 #ifndef OPENSSL_NO_SCTP
@@ -310,10 +314,10 @@ static int state_machine(SSL *s, int server)
     }
 #endif
 
-    /* Initialise state machine */
+    /* 初始化状态机为写状态，Initialise state machine */
     if (st->state == MSG_FLOW_UNINITED
             || st->state == MSG_FLOW_FINISHED) {
-        if (st->state == MSG_FLOW_UNINITED) {
+        if (st->state == MSG_FLOW_UNINITED) {  /* 第一次协商前，初始状态 */
             st->hand_state = TLS_ST_BEFORE;
             st->request_state = TLS_ST_BEFORE;
         }
@@ -384,11 +388,12 @@ static int state_machine(SSL *s, int server)
         }
 
         st->state = MSG_FLOW_WRITING;
-        init_write_state_machine(s);
+        init_write_state_machine(s);               /* 设置初始状态：写 */
     }
 
+    /* 状态机跳转，读、写直到握手完成 */
     while (st->state != MSG_FLOW_FINISHED) {
-        if (st->state == MSG_FLOW_READING) {
+        if (st->state == MSG_FLOW_READING) {       /* 读状态 */
             ssret = read_state_machine(s);
             if (ssret == SUB_STATE_FINISHED) {
                 st->state = MSG_FLOW_WRITING;
@@ -397,7 +402,7 @@ static int state_machine(SSL *s, int server)
                 /* NBIO or error */
                 goto end;
             }
-        } else if (st->state == MSG_FLOW_WRITING) {
+        } else if (st->state == MSG_FLOW_WRITING) {/* 写状态 */
             ssret = write_state_machine(s);
             if (ssret == SUB_STATE_FINISHED) {
                 st->state = MSG_FLOW_READING;
@@ -725,6 +730,7 @@ static SUB_STATE_RETURN write_state_machine(SSL *s)
 
     cb = get_callback(s);
 
+    /* 根据不同角色，设置不同的处理函数 */
     if (s->server) {
         transition = ossl_statem_server_write_transition;
         pre_work = ossl_statem_server_pre_work;

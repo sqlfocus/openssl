@@ -91,7 +91,7 @@ struct ossl_statem_st {
     int in_init;
     int read_state_first_init;
     /* true when we are actually in SSL_accept() or SSL_connect() */
-    int in_handshake;
+    int in_handshake;           /* */
     /*
      * True when are processing a "real" handshake that needs cleaning up (not
      * just a HelloRequest or similar).

@@ -3966,7 +3966,8 @@ int ssl3_renegotiate(SSL *s)
  * should not do a renegotiation if SSL_in_init(s) is true. Returns 1 if we
  * should do a renegotiation now and sets up the state machine for it. Otherwise
  * returns 0.
- */
+ *//* 判断重协商是否可行
+      @retval: 1/0, 可行/不可行 */
 int ssl3_renegotiate_check(SSL *s, int initok)
 {
     int ret = 0;

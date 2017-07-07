@@ -518,9 +518,10 @@ int SSL_CTX_set_ssl_version(SSL_CTX *ctx, const SSL_METHOD *meth)
     return (1);
 }
 
+/* 构建SSL对象 */
 SSL *SSL_new(SSL_CTX *ctx)
 {
-    SSL *s;
+    SSL *s;   /* struct ssl_st */
 
     if (ctx == NULL) {
         SSLerr(SSL_F_SSL_NEW, SSL_R_NULL_SSL_CTX);
@@ -1153,6 +1154,7 @@ int SSL_get_wfd(const SSL *s)
 }
 
 #ifndef OPENSSL_NO_SOCK
+/* 设定 */
 int SSL_set_fd(SSL *s, int fd)
 {
     int ret = 0;
@@ -1455,16 +1457,20 @@ int SSL_get_changed_async_fds(SSL *s, OSSL_ASYNC_FD *addfd, size_t *numaddfds,
                                           numdelfds);
 }
 
+/* 服务器端握手协商 */
 int SSL_accept(SSL *s)
 {
+    /* 设置初始化状态 */
     if (s->handshake_func == NULL) {
         /* Not properly initialized yet */
         SSL_set_accept_state(s);
     }
 
+    /* 开始握手流程 */
     return SSL_do_handshake(s);
 }
 
+/* 客户端握手协商 */
 int SSL_connect(SSL *s)
 {
     if (s->handshake_func == NULL) {
@@ -2618,28 +2624,32 @@ static int ssl_session_cmp(const SSL_SESSION *a, const SSL_SESSION *b)
  * variable. The reason is that the functions aren't static, they're exposed
  * via ssl.h.
  */
-
+/* 构建SSL环境，后续通过 SSL_new() 构建SSL对象 */
 SSL_CTX *SSL_CTX_new(const SSL_METHOD *meth)
 {
     SSL_CTX *ret = NULL;
 
-    if (meth == NULL) {
+    if (meth == NULL) {         /* 由 TLS_method() 指定*/
         SSLerr(SSL_F_SSL_CTX_NEW, SSL_R_NULL_SSL_METHOD_PASSED);
         return (NULL);
     }
 
+    /* 基础初始化，如加载算法等 */
     if (!OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL))
         return NULL;
 
+    /* */
     if (SSL_get_ex_data_X509_STORE_CTX_idx() < 0) {
         SSLerr(SSL_F_SSL_CTX_NEW, SSL_R_X509_VERIFICATION_SETUP_PROBLEMS);
         goto err;
     }
+
+    /* 分配内存 */
     ret = OPENSSL_zalloc(sizeof(*ret));
     if (ret == NULL)
         goto err;
 
-    ret->method = meth;
+    ret->method = meth;                 /* 赋值对应版本的操控API集合 */
     ret->min_proto_version = 0;
     ret->max_proto_version = 0;
     ret->session_cache_mode = SSL_SESS_CACHE_SERVER;
@@ -3193,6 +3203,7 @@ static int ssl_do_handshake_intern(void *vargs)
     return s->handshake_func(s);
 }
 
+/* SSL握手协商流程 */
 int SSL_do_handshake(SSL *s)
 {
     int ret = 1;
@@ -3204,7 +3215,7 @@ int SSL_do_handshake(SSL *s)
 
     ossl_statem_check_finish_init(s, -1);
 
-    s->method->ssl_renegotiate_check(s, 0);
+    s->method->ssl_renegotiate_check(s, 0);  /* 重协商要求无悬挂数据 */
 
     if (SSL_in_init(s) || SSL_in_before(s)) {
         if ((s->mode & SSL_MODE_ASYNC) && ASYNC_get_current_job() == NULL) {
@@ -3214,30 +3225,33 @@ int SSL_do_handshake(SSL *s)
 
             ret = ssl_start_async_job(s, &args, ssl_do_handshake_intern);
         } else {
-            ret = s->handshake_func(s);
+            ret = s->handshake_func(s);      /* 开始协商, ossl_statem_accept/ossl_statem_connect() */
         }
     }
     return ret;
 }
 
+/* 服务器端状态初始化 */
 void SSL_set_accept_state(SSL *s)
 {
     s->server = 1;
     s->shutdown = 0;
     ossl_statem_clear(s);
-    s->handshake_func = s->method->ssl_accept;
+    s->handshake_func = s->method->ssl_accept;  /* =ossl_statem_accept() */
     clear_ciphers(s);
 }
 
+/* 客户端状态初始化 */
 void SSL_set_connect_state(SSL *s)
 {
     s->server = 0;
     s->shutdown = 0;
     ossl_statem_clear(s);
-    s->handshake_func = s->method->ssl_connect;
+    s->handshake_func = s->method->ssl_connect; /* =ossl_statem_connect() */
     clear_ciphers(s);
 }
 
+/* 桩指针，逻辑上未定义的函数指针 */
 int ssl_undefined_function(SSL *s)
 {
     SSLerr(SSL_F_SSL_UNDEFINED_FUNCTION, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);

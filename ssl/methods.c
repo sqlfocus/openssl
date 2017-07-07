@@ -21,9 +21,9 @@ IMPLEMENT_tls_meth_func(TLS_ANY_VERSION, 0, 0,
                         ossl_statem_connect, TLSv1_2_enc_data)
 #ifndef OPENSSL_NO_TLS1_3_METHOD
 IMPLEMENT_tls_meth_func(TLS1_3_VERSION, 0, SSL_OP_NO_TLSv1_3,
-                        tlsv1_3_method,
-                        ossl_statem_accept,
-                        ossl_statem_connect, TLSv1_3_enc_data)
+                        tlsv1_3_method,        /* 函数名，最终返回生成的方法结构 */
+                        ossl_statem_accept,    /* 服务器端accept方法接收 */
+                        ossl_statem_connect, TLSv1_3_enc_data)  /* 客户端connect方法 */
 #endif
 #ifndef OPENSSL_NO_TLS1_2_METHOD
 IMPLEMENT_tls_meth_func(TLS1_2_VERSION, 0, SSL_OP_NO_TLSv1_2,
@@ -180,8 +180,10 @@ IMPLEMENT_dtls1_meth_func(DTLS_ANY_VERSION, 0, 0,
                           ossl_statem_connect, DTLSv1_2_enc_data)
 #if OPENSSL_API_COMPAT < 0x10100000L
 # ifndef OPENSSL_NO_TLS1_2_METHOD
+/* 定义TLS1.2加密套件方法 */
 const SSL_METHOD *TLSv1_2_method(void)
 {
+    /* 参考 IMPLEMENT_tls_meth_func(,,tlsv1_2_method...), ~/ssl/methods.c */
     return tlsv1_2_method();
 }
 

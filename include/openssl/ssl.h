@@ -852,8 +852,9 @@ DEPRECATEDIN_1_1_0(void SSL_set_debug(SSL *s, int debug))
  * TLS_ST_OK = A handshake has been successfully completed
  */
 typedef enum {
-    TLS_ST_BEFORE,
-    TLS_ST_OK,
+    TLS_ST_BEFORE,                       /* 握手流程尚未开始 */
+    TLS_ST_OK,                           /* 握手流程结束 */
+    
     DTLS_ST_CR_HELLO_VERIFY_REQUEST,
     TLS_ST_CR_SRVR_HELLO,
     TLS_ST_CR_CERT,
@@ -1656,7 +1657,9 @@ DEPRECATEDIN_1_1_0(__owur const SSL_METHOD *SSLv3_client_method(void)) /* SSLv3 
 #define SSLv23_server_method    TLS_server_method
 #define SSLv23_client_method    TLS_client_method
 
-/* Negotiate highest available SSL/TLS version */
+/* 应该使用此接口，采用支持的最新的方法；使用诸如TLSv1_2_method，则需要在编译
+   时定义编译参数
+   Negotiate highest available SSL/TLS version */
 __owur const SSL_METHOD *TLS_method(void);
 __owur const SSL_METHOD *TLS_server_method(void);
 __owur const SSL_METHOD *TLS_client_method(void);
@@ -1673,6 +1676,7 @@ DEPRECATEDIN_1_1_0(__owur const SSL_METHOD *TLSv1_1_server_method(void)) /* TLSv
 DEPRECATEDIN_1_1_0(__owur const SSL_METHOD *TLSv1_1_client_method(void)) /* TLSv1.1 */
 # endif
 
+/* 定义TLS1.2支持的方法 */
 # ifndef OPENSSL_NO_TLS1_2_METHOD
 DEPRECATEDIN_1_1_0(__owur const SSL_METHOD *TLSv1_2_method(void)) /* TLSv1.2 */
 DEPRECATEDIN_1_1_0(__owur const SSL_METHOD *TLSv1_2_server_method(void)) /* TLSv1.2 */

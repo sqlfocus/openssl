@@ -39,6 +39,7 @@ extern "C" {
 # define ERR_FLAG_MARK           0x01
 
 # define ERR_NUM_ERRORS  16
+/* 错误循环堆栈，方便暴露执行流程的错误 */
 typedef struct err_state_st {
     int err_flags[ERR_NUM_ERRORS];
     unsigned long err_buffer[ERR_NUM_ERRORS];

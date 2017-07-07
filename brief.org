@@ -5,26 +5,23 @@
 本系列文档摘录openssl的内部实现，以期深入了解SSL的交互流程，及与加速卡
 的整合流程！
 
+* SSL_do_handshake()
+定义文件：~/ssl/ssl_lib.c
+作用： 握手协商入口
 
-* SSL_library_init()
-定义文件：
-作用：
-
-* SSL_new()
-定义文件：
-作用：
-
-* SSL_set_fd()
-定义文件：
-作用：
-
-* SSL_connect()
-定义文件：
-作用：
-
-* SSL_accept()
-定义文件：
-作用：
+#+BEGIN_EXAMPLE
+-SSL_connect()                      客户端启动协商, ssl/ssl_lib.c
+  -SSL_set_accept_state()
+  -SSL_do_handshake()
+    -ossl_statem_connect()          ssl/statem/statem.c
+      -state_machine()              状态机驱动的握手流程
+  
+-SSL_accept()                       服务器端启动协商, ssl/ssl_lib.c
+  -SSL_set_accept_state()
+  -SSL_do_handshake()
+    -ossl_statem_accept()           ssl/statem/statem.c
+      -state_machine()
+#+END_EXAMPLE
 
 * SSL_read()
 定义文件：
@@ -33,6 +30,13 @@
 * SSL_write()
 定义文件：
 作用：
+
+* 名词解释
+ - DTLS, Datagram Transport Layer Security, 即数据包传输层安全性协议
+    : TLS不能用来保证UDP上传输的数据的安全，因此Datagram TLS试图在现存的TLS
+    : 协议架构上提出扩展，使之支持UDP，即成为TLS的支持数据报传输的版本
+    :
+    : DTLS 1.0 基于 TLS 1.1, DTLS 1.2 基于TLS 1.2
 
 * 参考
  - <<SSL & TLS>>

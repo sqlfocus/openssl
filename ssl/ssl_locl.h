@@ -448,20 +448,20 @@ struct ssl_cipher_st {
 
 /* Used to hold SSL/TLS functions */
 struct ssl_method_st {
-    int version;
+    int version;                      /* 版本号 */
     unsigned flags;
-    unsigned long mask;
+    unsigned long mask;               /* */
     int (*ssl_new) (SSL *s);
     void (*ssl_clear) (SSL *s);
     void (*ssl_free) (SSL *s);
-    int (*ssl_accept) (SSL *s);
-    int (*ssl_connect) (SSL *s);
+    int (*ssl_accept) (SSL *s);       /* 服务器角色的accept方法, ossl_statem_accept() */
+    int (*ssl_connect) (SSL *s);      /* 客户端角色的connect方法, ossl_statem_connect() */
     int (*ssl_read) (SSL *s, void *buf, size_t len, size_t *readbytes);
     int (*ssl_peek) (SSL *s, void *buf, size_t len, size_t *readbytes);
     int (*ssl_write) (SSL *s, const void *buf, size_t len, size_t *written);
     int (*ssl_shutdown) (SSL *s);
-    int (*ssl_renegotiate) (SSL *s);
-    int (*ssl_renegotiate_check) (SSL *s, int);
+    int (*ssl_renegotiate) (SSL *s);  /* 重协商, ssl3_renegotiate() */
+    int (*ssl_renegotiate_check) (SSL *s, int); /* 重协商检测, ssl3_renegotiate_check() */
     int (*ssl_read_bytes) (SSL *s, int type, int *recvd_type,
                            unsigned char *buf, size_t len, int peek,
                            size_t *readbytes);
@@ -971,31 +971,30 @@ struct ssl_ctx_st {
     uint32_t max_early_data;
 };
 
+/* #define struct ssl_st SSL */
 struct ssl_st {
     /*
      * protocol version (one of SSL2_VERSION, SSL3_VERSION, TLS1_VERSION,
      * DTLS1_VERSION)
      */
-    int version;
+    int version;                           /* TLS版本 */
     /* SSLv3 */
-    const SSL_METHOD *method;
+    const SSL_METHOD *method;              /* 对应TLS不同版本的API */
     /*
      * There are 2 BIO's even though they are normally both the same.  This
      * is so data can be read and written to different handlers
      */
-    /* used by SSL_read */
-    BIO *rbio;
-    /* used by SSL_write */
-    BIO *wbio;
-    /* used during session-id reuse to concatenate messages */
-    BIO *bbio;
+    BIO *rbio;    /* used by SSL_read() */
+    BIO *wbio;    /* used by SSL_write() */
+    BIO *bbio;    /* used during session-id reuse to concatenate messages */
     /*
      * This holds a variable that indicates what we were doing when a 0 or -1
      * is returned.  This is needed for non-blocking IO so we know what
      * request needs re-doing when in SSL_accept or SSL_connect
      */
     int rwstate;
-    int (*handshake_func) (SSL *);
+    int (*handshake_func) (SSL *);         /* SSL握手函数，根据->server角色决定执行函数, 
+                                              ossl_statem_accept()/ossl_statem_connect() */
     /*
      * Imagine that here's a boolean member "init" that is switched as soon
      * as SSL_set_{accept/connect}_state is called for the first time, so
@@ -1003,8 +1002,7 @@ struct ssl_st {
      * handshake_func is == 0 until then, we use this test instead of an
      * "init" member.
      */
-    /* are we the server side? */
-    int server;
+    int server;                            /* 0/1, 是否为服务器 */
     /*
      * Generate a new session or reuse an old one.
      * NB: For servers, the 'new' session may actually be a previously
@@ -1285,7 +1283,7 @@ struct ssl_st {
      */
     uint32_t early_data_count;
 
-    CRYPTO_RWLOCK *lock;
+    CRYPTO_RWLOCK *lock;            /* 锁， */
 };
 
 /*
@@ -1909,10 +1907,11 @@ extern const SSL3_ENC_METHOD DTLSv1_2_enc_data;
 # define SSL_METHOD_NO_FIPS      (1U<<0)
 # define SSL_METHOD_NO_SUITEB    (1U<<1)
 
+/* 利用此宏展开TLS各版本支持的方法 */
 # define IMPLEMENT_tls_meth_func(version, flags, mask, func_name, s_accept, \
                                  s_connect, enc_data) \
 const SSL_METHOD *func_name(void)  \
-        { \
+   { \   /* 各字段参考 struct ssl_method_st */
         static const SSL_METHOD func_name##_data= { \
                 version, \
                 flags, \
