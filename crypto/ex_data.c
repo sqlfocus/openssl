@@ -14,7 +14,7 @@
 /*
  * Each structure type (sometimes called a class), that supports
  * exdata has a stack of callbacks for each instance.
- */
+ *//* */
 struct ex_callback_st {
     long argl;                  /* Arbitrary long */
     void *argp;                 /* Arbitrary void * */
@@ -26,27 +26,29 @@ struct ex_callback_st {
 /*
  * The state for each class.  This could just be a typedef, but
  * a structure allows future changes.
- */
+ *//* 自定义操控集合 */
 typedef struct ex_callbacks_st {
     STACK_OF(EX_CALLBACK) *meth;
 } EX_CALLBACKS;
-
 static EX_CALLBACKS ex_data[CRYPTO_EX_INDEX__COUNT];
 
+/* ex_data[]数组保护集合 */
 static CRYPTO_RWLOCK *ex_data_lock = NULL;
 static CRYPTO_ONCE ex_data_init = CRYPTO_ONCE_STATIC_INIT;
 
+
+/* ex_data[]初始化函数 */
 DEFINE_RUN_ONCE_STATIC(do_ex_data_init)
 {
     OPENSSL_init_crypto(0, NULL);
-    ex_data_lock = CRYPTO_THREAD_lock_new();
+    ex_data_lock = CRYPTO_THREAD_lock_new();   /* 锁初始化 */
     return ex_data_lock != NULL;
 }
 
 /*
  * Return the EX_CALLBACKS from the |ex_data| array that corresponds to
  * a given class.  On success, *holds the lock.*
- */
+ *//* 返回对应类别的操控函数集合 */
 static EX_CALLBACKS *get_and_lock(int class_index)
 {
     EX_CALLBACKS *ip;
@@ -60,7 +62,6 @@ static EX_CALLBACKS *get_and_lock(int class_index)
         CRYPTOerr(CRYPTO_F_GET_AND_LOCK, ERR_R_MALLOC_FAILURE);
         return NULL;
     }
-
     if (ex_data_lock == NULL) {
         /*
          * This can happen in normal operation when using CRYPTO_mem_leaks().
@@ -74,8 +75,8 @@ static EX_CALLBACKS *get_and_lock(int class_index)
          return NULL;
     }
 
-    ip = &ex_data[class_index];
-    CRYPTO_THREAD_write_lock(ex_data_lock);
+    ip = &ex_data[class_index];             /* 获取对应类别的操控函数集合 */
+    CRYPTO_THREAD_write_lock(ex_data_lock); /* 获取锁 */
     return ip;
 }
 

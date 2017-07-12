@@ -181,7 +181,7 @@ CONF *NCONF_new(CONF_METHOD *meth)
     CONF *ret;
 
     if (meth == NULL)
-        meth = NCONF_default();
+        meth = NCONF_default();  /* default_method */
 
     ret = meth->create(meth);
     if (ret == NULL) {
@@ -212,7 +212,7 @@ int NCONF_load(CONF *conf, const char *file, long *eline)
         CONFerr(CONF_F_NCONF_LOAD, CONF_R_NO_CONF);
         return 0;
     }
-
+    /* default_method->load() = def_load() */
     return conf->meth->load(conf, file, eline);
 }
 

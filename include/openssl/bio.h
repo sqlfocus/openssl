@@ -31,12 +31,12 @@
 extern "C" {
 #endif
 
-/* There are the classes of BIOs */
+/* BIO大类，There are the classes of BIOs */
 # define BIO_TYPE_DESCRIPTOR     0x0100 /* socket, fd, connect or accept */
 # define BIO_TYPE_FILTER         0x0200
 # define BIO_TYPE_SOURCE_SINK    0x0400
 
-/* These are the 'types' of BIOs */
+/* BIO对象类型，These are the 'types' of BIOs */
 # define BIO_TYPE_NONE             0
 # define BIO_TYPE_MEM            ( 1|BIO_TYPE_SOURCE_SINK)
 # define BIO_TYPE_FILE           ( 2|BIO_TYPE_SOURCE_SINK)
@@ -69,8 +69,8 @@ extern "C" {
  * BIO_FILENAME_READ|BIO_CLOSE to open or close on free.
  * BIO_set_fp(in,stdin,BIO_NOCLOSE);
  */
-# define BIO_NOCLOSE             0x00
-# define BIO_CLOSE               0x01
+# define BIO_NOCLOSE             0x00      /* IO完毕后，不关闭底层FD */
+# define BIO_CLOSE               0x01      /* IO完毕后，关闭底层FD */
 
 /*
  * These are used in the following macros and are passed to BIO_ctrl()
@@ -150,7 +150,7 @@ extern "C" {
 # define BIO_FP_READ             0x02
 # define BIO_FP_WRITE            0x04
 # define BIO_FP_APPEND           0x08
-# define BIO_FP_TEXT             0x10
+# define BIO_FP_TEXT             0x10     /* 文本格式 */
 
 # define BIO_FLAGS_READ          0x01
 # define BIO_FLAGS_WRITE         0x02

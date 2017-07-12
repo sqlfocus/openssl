@@ -188,8 +188,10 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_no_add_algs)
 }
 
 static CRYPTO_ONCE config = CRYPTO_ONCE_STATIC_INIT;
-static int config_inited = 0;
+static int config_inited = 0;    /* 是否已加载过配置文件 */
 static const char *appname;
+
+/* 加载配置 */
 DEFINE_RUN_ONCE_STATIC(ossl_init_config)
 {
 #ifdef OPENSSL_INIT_DEBUG
@@ -495,7 +497,7 @@ void OPENSSL_cleanup(void)
  * If this function is called with a non NULL settings value then it must be
  * called prior to any threads making calls to any OpenSSL functions,
  * i.e. passing a non-null settings value is assumed to be single-threaded.
- */
+ *//* 注意: 如果@param settings非NULL，则此函数线程不安全，必须在任何OpenSSL函数之前调用 */
 int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)
 {
     static int stoperrset = 0;
@@ -545,6 +547,7 @@ int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)
             && !RUN_ONCE(&config, ossl_init_no_config))
         return 0;
 
+    /* 加载配置信息 */
     if (opts & OPENSSL_INIT_LOAD_CONFIG) {
         int ret;
         CRYPTO_THREAD_write_lock(init_lock);
@@ -594,6 +597,7 @@ int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)
         return 0;
 #  endif
 # endif
+    /* 加载支持的硬件引擎 */
     if (opts & (OPENSSL_INIT_ENGINE_ALL_BUILTIN
                 | OPENSSL_INIT_ENGINE_OPENSSL
                 | OPENSSL_INIT_ENGINE_AFALG)) {

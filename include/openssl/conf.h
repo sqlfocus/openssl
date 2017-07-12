@@ -22,11 +22,12 @@
 extern "C" {
 #endif
 
-typedef struct {
+    
+typedef struct {    
     char *section;
     char *name;
     char *value;
-} CONF_VALUE;
+} CONF_VALUE;        /* 配置文件项解析结果 */
 
 DEFINE_STACK_OF(CONF_VALUE)
 DEFINE_LHASH_OF(CONF_VALUE);
@@ -100,11 +101,11 @@ DEPRECATEDIN_1_1_0(void OPENSSL_config(const char *config_name))
  * New conf code.  The semantics are different from the functions above. If
  * that wasn't the case, the above functions would have been replaced
  */
-
+/* 配置文件解析结果 */
 struct conf_st {
-    CONF_METHOD *meth;
-    void *meth_data;
-    LHASH_OF(CONF_VALUE) *data;
+    CONF_METHOD *meth;          /* 操控函数集 */
+    void *meth_data;            /* */
+    LHASH_OF(CONF_VALUE) *data; /* 解析结果 */
 };
 
 CONF *NCONF_new(CONF_METHOD *meth);

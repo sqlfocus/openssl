@@ -25,7 +25,7 @@
  * structural reference. Hence, engine_list_head, and each non-null "next"
  * pointer account for the list itself assuming exactly 1 structural
  * reference on each list member.
- */
+ *//* 硬件引擎链 */
 static ENGINE *engine_list_head = NULL;
 static ENGINE *engine_list_tail = NULL;
 

@@ -113,24 +113,24 @@ typedef struct bio_f_buffer_ctx_struct {
 } BIO_F_BUFFER_CTX;
 
 struct bio_st {
-    const BIO_METHOD *method;
+    const BIO_METHOD *method;   /* 操控集合，如 methods_filep */
     /* bio, mode, argp, argi, argl, ret */
-    BIO_callback_fn callback;
+    BIO_callback_fn callback;   /* 自定义回调???可以管控处理流程，通过 BIO_set_callback_ex() 设定 */
     BIO_callback_fn_ex callback_ex;
     char *cb_arg;               /* first argument for the callback */
-    int init;
-    int shutdown;
+    int init;                   /* 0/1, 是否初始化完毕 */
+    int shutdown;               /* 0/1, IO处理后是否需要关闭 */
     int flags;                  /* extra storage */
     int retry_reason;
-    int num;
-    void *ptr;
+    int num;                    /* */
+    void *ptr;                  /* 对应底层的FD，如 FILE* */
     struct bio_st *next_bio;    /* used by filter BIOs */
     struct bio_st *prev_bio;    /* used by filter BIOs */
-    CRYPTO_REF_COUNT references;
+    CRYPTO_REF_COUNT references;/* 引用计数 */
     uint64_t num_read;
     uint64_t num_write;
-    CRYPTO_EX_DATA ex_data;
-    CRYPTO_RWLOCK *lock;
+    CRYPTO_EX_DATA ex_data;     /* 自定义类型栈 */
+    CRYPTO_RWLOCK *lock;        /* 锁 */
 };
 
 #ifndef OPENSSL_NO_SOCK

@@ -18,12 +18,14 @@
 #undef MIN_NODES
 #define MIN_NODES       16
 #define UP_LOAD         (2*LH_LOAD_MULT) /* load times 256 (default 2) */
-#define DOWN_LOAD       (LH_LOAD_MULT) /* load times 256 (default 1) */
+#define DOWN_LOAD       (LH_LOAD_MULT)   /* load times 256 (default 1) */
 
 static int expand(OPENSSL_LHASH *lh);
 static void contract(OPENSSL_LHASH *lh);
 static OPENSSL_LH_NODE **getrn(OPENSSL_LHASH *lh, const void *data, unsigned long *rhash);
 
+/* typedef struct lhash_st OPENSSL_LHASH; */
+/* 新创建hash链表 */
 OPENSSL_LHASH *OPENSSL_LH_new(OPENSSL_LH_HASHFUNC h, OPENSSL_LH_COMPFUNC c)
 {
     OPENSSL_LHASH *ret;
@@ -32,7 +34,7 @@ OPENSSL_LHASH *OPENSSL_LH_new(OPENSSL_LH_HASHFUNC h, OPENSSL_LH_COMPFUNC c)
         goto err0;
     if ((ret->b = OPENSSL_zalloc(sizeof(*ret->b) * MIN_NODES)) == NULL)
         goto err1;
-    ret->comp = ((c == NULL) ? (OPENSSL_LH_COMPFUNC)strcmp : c);
+    ret->comp = ((c == NULL) ? (OPENSSL_LH_COMPFUNC)strcmp : c); /* 指定默认的比较函数，hash函数 */
     ret->hash = ((h == NULL) ? (OPENSSL_LH_HASHFUNC)OPENSSL_LH_strhash : h);
     ret->num_nodes = MIN_NODES / 2;
     ret->num_alloc_nodes = MIN_NODES;
@@ -47,6 +49,7 @@ OPENSSL_LHASH *OPENSSL_LH_new(OPENSSL_LH_HASHFUNC h, OPENSSL_LH_COMPFUNC c)
     return (NULL);
 }
 
+/* 释放hash列表结构，包括插入的数据 */
 void OPENSSL_LH_free(OPENSSL_LHASH *lh)
 {
     unsigned int i;
@@ -67,6 +70,7 @@ void OPENSSL_LH_free(OPENSSL_LHASH *lh)
     OPENSSL_free(lh);
 }
 
+/* 插入hash列表 */
 void *OPENSSL_LH_insert(OPENSSL_LHASH *lh, void *data)
 {
     unsigned long hash;
@@ -74,12 +78,13 @@ void *OPENSSL_LH_insert(OPENSSL_LHASH *lh, void *data)
     void *ret;
 
     lh->error = 0;
+    /* 判断是否需要扩充 */
     if ((lh->up_load <= (lh->num_items * LH_LOAD_MULT / lh->num_nodes)) && !expand(lh))
         return NULL;        /* 'lh->error++' already done in 'expand' */
 
     rn = getrn(lh, data, &hash);
 
-    if (*rn == NULL) {
+    if (*rn == NULL) {     /* 插入 */
         if ((nn = OPENSSL_malloc(sizeof(*nn))) == NULL) {
             lh->error++;
             return (NULL);
@@ -91,7 +96,7 @@ void *OPENSSL_LH_insert(OPENSSL_LHASH *lh, void *data)
         ret = NULL;
         lh->num_insert++;
         lh->num_items++;
-    } else {                    /* replace same key */
+    } else {               /* 替换，replace same key */
 
         ret = (*rn)->data;
         (*rn)->data = data;
@@ -100,6 +105,7 @@ void *OPENSSL_LH_insert(OPENSSL_LHASH *lh, void *data)
     return (ret);
 }
 
+/* 从hash表删除数据 */
 void *OPENSSL_LH_delete(OPENSSL_LHASH *lh, const void *data)
 {
     unsigned long hash;
@@ -121,6 +127,7 @@ void *OPENSSL_LH_delete(OPENSSL_LHASH *lh, const void *data)
     }
 
     lh->num_items--;
+    /* 缩减hash表项大小 */
     if ((lh->num_nodes > MIN_NODES) &&
         (lh->down_load >= (lh->num_items * LH_LOAD_MULT / lh->num_nodes)))
         contract(lh);
@@ -128,6 +135,7 @@ void *OPENSSL_LH_delete(OPENSSL_LHASH *lh, const void *data)
     return (ret);
 }
 
+/* 获取某值对应的hash表项 */
 void *OPENSSL_LH_retrieve(OPENSSL_LHASH *lh, const void *data)
 {
     unsigned long hash;
@@ -184,6 +192,7 @@ void OPENSSL_LH_doall_arg(OPENSSL_LHASH *lh, OPENSSL_LH_DOALL_FUNCARG func, void
     doall_util_fn(lh, 1, (OPENSSL_LH_DOALL_FUNC)0, func, arg);
 }
 
+/* 扩充hash表空间 */
 static int expand(OPENSSL_LHASH *lh)
 {
     OPENSSL_LH_NODE **n, **n1, **n2, *np;
@@ -229,6 +238,7 @@ static int expand(OPENSSL_LHASH *lh)
     return 1;
 }
 
+/* 缩减hash表空间 */
 static void contract(OPENSSL_LHASH *lh)
 {
     OPENSSL_LH_NODE **n, *n1, *np;
@@ -264,6 +274,7 @@ static void contract(OPENSSL_LHASH *lh)
     }
 }
 
+/* 计算hash值，并返回对应的hash桶可用插入点 */
 static OPENSSL_LH_NODE **getrn(OPENSSL_LHASH *lh,
                                const void *data, unsigned long *rhash)
 {
@@ -271,11 +282,11 @@ static OPENSSL_LH_NODE **getrn(OPENSSL_LHASH *lh,
     unsigned long hash, nn;
     OPENSSL_LH_COMPFUNC cf;
 
-    hash = (*(lh->hash)) (data);
+    hash = (*(lh->hash)) (data);   /* 计算hash值 */
     lh->num_hash_calls++;
-    *rhash = hash;
+    *rhash = hash;                 /* 返回 */
 
-    nn = hash % lh->pmax;
+    nn = hash % lh->pmax;          /* 计算对应的hash桶 */
     if (nn < lh->p)
         nn = hash % lh->num_alloc_nodes;
 
@@ -283,23 +294,23 @@ static OPENSSL_LH_NODE **getrn(OPENSSL_LHASH *lh,
     ret = &(lh->b[(int)nn]);
     for (n1 = *ret; n1 != NULL; n1 = n1->next) {
         lh->num_hash_comps++;
-        if (n1->hash != hash) {
+        if (n1->hash != hash) {    /* 先比较hash值，后比较key内容 */
             ret = &(n1->next);
             continue;
         }
         lh->num_comp_calls++;
         if (cf(n1->data, data) == 0)
-            break;
+            break;                 /* 此时插入点为替换 */
         ret = &(n1->next);
     }
-    return (ret);
+    return (ret);                  /* 返回插入点 */
 }
 
 /*
  * The following hash seems to work very well on normal text strings no
  * collisions on /usr/dict/words and it distributes on %2^n quite well, not
  * as good as MD5, but still good.
- */
+ *//* 默认的hash函数 */
 unsigned long OPENSSL_LH_strhash(const char *c)
 {
     unsigned long ret = 0;

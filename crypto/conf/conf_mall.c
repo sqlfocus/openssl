@@ -16,7 +16,7 @@
 #include <openssl/engine.h>
 
 /* Load all OpenSSL builtin modules */
-
+/* 加载内置的模块儿 */
 void OPENSSL_load_builtin_modules(void)
 {
     /* Add builtin modules here */

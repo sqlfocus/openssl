@@ -115,9 +115,9 @@ void OPENSSL_LH_node_usage_stats_bio(const OPENSSL_LHASH *lh, BIO *out);
 # endif
 
 /* Type checking... */
-
+/* 自定义hash链表类型 */
 # define LHASH_OF(type) struct lhash_st_##type
-
+/* 自定义类型hash链表操控集合 */
 # define DEFINE_LHASH_OF(type) \
     LHASH_OF(type) { union lh_##type##_dummy { void* d1; unsigned long d2; int d3; } dummy; }; \
     static ossl_inline LHASH_OF(type) * \
@@ -194,6 +194,7 @@ void OPENSSL_LH_node_usage_stats_bio(const OPENSSL_LHASH *lh, BIO *out);
     } \
     LHASH_OF(type)
 
+/* 定义char及const char*类型的hash表 */    
 DEFINE_LHASH_OF(OPENSSL_STRING);
 DEFINE_LHASH_OF(OPENSSL_CSTRING);
 

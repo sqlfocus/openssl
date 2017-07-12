@@ -5,6 +5,11 @@
 本系列文档摘录openssl的内部实现，以期深入了解SSL的交互流程，及与加速卡
 的整合流程！
 
+* 代码组织
+ - apps                   :: 示例程序，命令行程序
+ - crypto                 :: 加解密算法库
+ - ssl                    :: TLS协议库
+
 * SSL_do_handshake()
 定义文件：~/ssl/ssl_lib.c
 作用： 握手协商入口
@@ -23,14 +28,6 @@
       -state_machine()
 #+END_EXAMPLE
 
-* SSL_read()
-定义文件：
-作用：
-
-* SSL_write()
-定义文件：
-作用：
-
 * 名词解释
  - DTLS, Datagram Transport Layer Security, 即数据包传输层安全性协议
     : TLS不能用来保证UDP上传输的数据的安全，因此Datagram TLS试图在现存的TLS
@@ -40,6 +37,7 @@
 
 * 参考
  - <<SSL & TLS>>
+ - <<SSL & TLS Essential>>
  - <<network security with openssl>>
 
 

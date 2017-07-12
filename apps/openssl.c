@@ -53,19 +53,22 @@ static int do_cmd(LHASH_OF(FUNCTION) *prog, int argc, char *argv[]);
 static void list_pkey(void);
 static void list_type(FUNC_TYPE ft);
 static void list_disabled(void);
-char *default_config_file = NULL;
+char *default_config_file = NULL;       /* 配置文件名，绝对路径 */
 
-BIO *bio_in = NULL;
+BIO *bio_in = NULL;                     /* 标准输入/输出/错误的描述符 */
 BIO *bio_out = NULL;
 BIO *bio_err = NULL;
 
 static int apps_startup()
 {
+    /* socket()编程，当对端read插口关闭时，write()会触发SIGPIPE信号； 如果屏
+       蔽掉，则会返回错误EPIPE，被错误判断捕捉；如果不屏蔽，则默认导致子进程
+       退出 */
 #ifdef SIGPIPE
     signal(SIGPIPE, SIG_IGN);
 #endif
 
-    /* Set non-default library initialisation settings */
+    /* 加载配置信息，Set non-default library initialisation settings */
     if (!OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_ALL_BUILTIN
                              | OPENSSL_INIT_LOAD_CONFIG, NULL))
         return 0;
@@ -84,6 +87,7 @@ static void apps_shutdown()
 #endif
 }
 
+/* 获取配置文件名，绝对路径 */
 static char *make_config_name()
 {
     const char *t;
@@ -91,20 +95,21 @@ static char *make_config_name()
     char *p;
 
     if ((t = getenv("OPENSSL_CONF")) != NULL)
-        return OPENSSL_strdup(t);
+        return OPENSSL_strdup(t);       /* 通过环境变量指定的配置文件 */
 
-    t = X509_get_default_cert_area();
+    t = X509_get_default_cert_area();   /* 获取证书根目录 */
     len = strlen(t) + 1 + strlen(OPENSSL_CONF) + 1;
     p = app_malloc(len, "config filename buffer");
     strcpy(p, t);
 #ifndef OPENSSL_SYS_VMS
     strcat(p, "/");
 #endif
-    strcat(p, OPENSSL_CONF);
+    strcat(p, OPENSSL_CONF);            /* 配置文件默认名openssl.cnf */
 
     return p;
 }
 
+/* openssl命令行入口 */
 int main(int argc, char *argv[])
 {
     FUNCTION f, *fp;
@@ -120,8 +125,8 @@ int main(int argc, char *argv[])
     arg.size = 0;
 
     /* Set up some of the environment. */
-    default_config_file = make_config_name();
-    bio_in = dup_bio_in(FORMAT_TEXT);
+    default_config_file = make_config_name();    /* 获取配置文件名 */
+    bio_in = dup_bio_in(FORMAT_TEXT);            /* 包装标准输入、输出到BIO结构 */
     bio_out = dup_bio_out(FORMAT_TEXT);
     bio_err = dup_bio_err(FORMAT_TEXT);
 
@@ -134,32 +139,38 @@ int main(int argc, char *argv[])
     win32_utf8argv(&argc, &argv);
 #endif
 
+    /* 打开内存泄漏调试功能 */
     p = getenv("OPENSSL_DEBUG_MEMORY");
     if (p != NULL && strcmp(p, "on") == 0)
         CRYPTO_set_mem_debug(1);
     CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
 
+    /* 联邦信息处理标准(Federal Information Processing Standards, FIPS)是一
+       套描述文件处理、加密算法和其他信息技术标准(在非军用政府机构和与这些
+       机构合作的政府承包商和供应商中应用的标准)的标准 */
     if (getenv("OPENSSL_FIPS")) {
         BIO_printf(bio_err, "FIPS mode not supported.\n");
         return 1;
     }
 
+    /* 加载配置信息 */
     if (!apps_startup())
         goto end;
 
+    /* 获取子命令名，如ca/req等 */
     prog = prog_init();
     pname = opt_progname(argv[0]);
 
-    /* first check the program name */
+    /* 执行子命令，first check the program name */
     f.name = pname;
     fp = lh_FUNCTION_retrieve(prog, &f);
     if (fp != NULL) {
         argv[0] = pname;
-        ret = fp->func(argc, argv);
-        goto end;
+        ret = fp->func(argc, argv);  /* static FUNCTION functions[]->func() */
+        goto end;                    /* 如子命令's_client'对应 s_client_main() */
     }
 
-    /* If there is stuff on the command line, run with that. */
+    /* 命令行指定了命令，直接执行；If there is stuff on the command line, run with that. */
     if (argc != 1) {
         argc--;
         argv++;
@@ -169,7 +180,7 @@ int main(int argc, char *argv[])
         goto end;
     }
 
-    /* ok, lets enter interactive mode */
+    /* 进入交互模式，ok, lets enter interactive mode */
     for (;;) {
         ret = 0;
         /* Read a line, continue reading if line ends with \ */
@@ -223,7 +234,7 @@ int main(int argc, char *argv[])
             break;
         }
 
-        ret = do_cmd(prog, arg.argc, arg.argv);
+        ret = do_cmd(prog, arg.argc, arg.argv);  /* 交互模式命令执行入口 */
         if (ret == EXIT_THE_PROGRAM) {
             ret = 0;
             goto end;
@@ -698,6 +709,7 @@ static void list_disabled(void)
 #endif
 }
 
+/* openssl支持的子命令构建hash表，并返回 */
 static LHASH_OF(FUNCTION) *prog_init(void)
 {
     LHASH_OF(FUNCTION) *ret;

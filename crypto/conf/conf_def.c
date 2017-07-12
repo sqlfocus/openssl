@@ -87,7 +87,7 @@ static CONF *def_create(CONF_METHOD *meth)
 
     ret = OPENSSL_malloc(sizeof(*ret));
     if (ret != NULL)
-        if (meth->init(ret) == 0) {
+ def_load       if (meth->init(ret) == 0) {
             OPENSSL_free(ret);
             ret = NULL;
         }
@@ -143,7 +143,7 @@ static int def_load(CONF *conf, const char *name, long *line)
 #ifdef OPENSSL_SYS_VMS
     in = BIO_new_file(name, "r");
 #else
-    in = BIO_new_file(name, "rb");
+    in = BIO_new_file(name, "rb");      /* 加载配置文件 */
 #endif
     if (in == NULL) {
         if (ERR_GET_REASON(ERR_peek_last_error()) == BIO_R_NO_SUCH_FILE)
@@ -153,7 +153,7 @@ static int def_load(CONF *conf, const char *name, long *line)
         return 0;
     }
 
-    ret = def_load_bio(conf, in, line);
+    ret = def_load_bio(conf, in, line); /* 解析配置，并存储在conf中 */
     BIO_free(in);
 
     return ret;
@@ -180,23 +180,24 @@ static int def_load_bio(CONF *conf, BIO *in, long *line)
         goto err;
     }
 
-    section = OPENSSL_strdup("default");
+    section = OPENSSL_strdup("default");   /* 默认仅查找[default] */
     if (section == NULL) {
         CONFerr(CONF_F_DEF_LOAD_BIO, ERR_R_MALLOC_FAILURE);
         goto err;
     }
 
-    if (_CONF_new_data(conf) == 0) {
+    if (_CONF_new_data(conf) == 0) {       /* 构建解析结果的hash表 */
         CONFerr(CONF_F_DEF_LOAD_BIO, ERR_R_MALLOC_FAILURE);
         goto err;
     }
 
-    sv = _CONF_new_section(conf, section);
+    sv = _CONF_new_section(conf, section); /* 构建[default]段 */
     if (sv == NULL) {
         CONFerr(CONF_F_DEF_LOAD_BIO, CONF_R_UNABLE_TO_CREATE_NEW_SECTION);
         goto err;
     }
 
+    /* 解析配置文件 */
     bufnum = 0;
     again = 0;
     for (;;) {
@@ -255,7 +256,7 @@ static int def_load_bio(CONF *conf, BIO *in, long *line)
         s = eat_ws(conf, buf);
         if (IS_EOF(conf, *s))
             continue;           /* blank line */
-        if (*s == '[') {
+        if (*s == '[') {        /* 段起始标识，解析段 */
             char *ss;
 
             s++;
@@ -264,7 +265,7 @@ static int def_load_bio(CONF *conf, BIO *in, long *line)
  again:
             end = eat_alpha_numeric(conf, ss);
             p = eat_ws(conf, end);
-            if (*p != ']') {
+            if (*p != ']') {         /* 段结束 */
                 if (*p != '\0' && ss != p) {
                     ss = p;
                     goto again;
@@ -275,28 +276,28 @@ static int def_load_bio(CONF *conf, BIO *in, long *line)
             }
             *end = '\0';
             if (!str_copy(conf, NULL, &section, start))
-                goto err;
+                goto err;            /* 提取段名 */
             if ((sv = _CONF_get_section(conf, section)) == NULL)
                 sv = _CONF_new_section(conf, section);
-            if (sv == NULL) {
+            if (sv == NULL) {        /* 获取段配置信息 */
                 CONFerr(CONF_F_DEF_LOAD_BIO,
                         CONF_R_UNABLE_TO_CREATE_NEW_SECTION);
                 goto err;
             }
             continue;
-        } else {
+        } else {                /* 配置项解析 */
             pname = s;
             psection = NULL;
             end = eat_alpha_numeric(conf, s);
             if ((end[0] == ':') && (end[1] == ':')) {
-                *end = '\0';
+                *end = '\0';         /* 配置项格式 'section::key = value' */
                 end += 2;
                 psection = pname;
                 pname = end;
                 end = eat_alpha_numeric(conf, end);
             }
             p = eat_ws(conf, end);
-            if (*p != '=') {
+            if (*p != '=') {         /* 配置项格式 'key = value' */
                 CONFerr(CONF_F_DEF_LOAD_BIO, CONF_R_MISSING_EQUAL_SIGN);
                 goto err;
             }
@@ -315,7 +316,7 @@ static int def_load_bio(CONF *conf, BIO *in, long *line)
                 CONFerr(CONF_F_DEF_LOAD_BIO, ERR_R_MALLOC_FAILURE);
                 goto err;
             }
-            if (psection == NULL)
+            if (psection == NULL)    /* 段默认为当前解析的section */
                 psection = section;
             v->name = OPENSSL_malloc(strlen(pname) + 1);
             v->value = NULL;
@@ -337,7 +338,7 @@ static int def_load_bio(CONF *conf, BIO *in, long *line)
                     goto err;
                 }
             } else
-                tv = sv;
+                tv = sv;             /* 配置项加入对应的段 */
             if (_CONF_add_string(conf, tv, v) == 0) {
                 CONFerr(CONF_F_DEF_LOAD_BIO, ERR_R_MALLOC_FAILURE);
                 goto err;

@@ -2393,18 +2393,19 @@ int raw_write_stdout(const void *buf, int siz)
  * and is therefore a show of intent more than anything else.  However, it
  * does impact behavior on some platform, such as differentiating between
  * text and binary input/output on non-Unix platforms
- */
+ *//* 是否指定了文本格式，因为有的平台操控文本、二进制文件略有不同 */
 static int istext(int format)
 {
     return (format & B_FORMAT_TEXT) == B_FORMAT_TEXT;
 }
 
+/* 构建stdin对应的BIO结构 */
 BIO *dup_bio_in(int format)
 {
     return BIO_new_fp(stdin,
                       BIO_NOCLOSE | (istext(format) ? BIO_FP_TEXT : 0));
 }
-
+/* 构建stdout对应的BIO结构 */
 BIO *dup_bio_out(int format)
 {
     BIO *b = BIO_new_fp(stdout,
@@ -2415,7 +2416,7 @@ BIO *dup_bio_out(int format)
 #endif
     return b;
 }
-
+/* 构建stderr对应的BIO结构 */
 BIO *dup_bio_err(int format)
 {
     BIO *b = BIO_new_fp(stderr,

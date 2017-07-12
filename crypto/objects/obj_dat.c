@@ -577,12 +577,12 @@ int OBJ_sn2nid(const char *s)
     return (nid_objs[*op].nid);
 }
 
+/* 对排序后的数组，二分查找 */
 const void *OBJ_bsearch_(const void *key, const void *base, int num, int size,
                          int (*cmp) (const void *, const void *))
 {
     return OBJ_bsearch_ex_(key, base, num, size, cmp, 0);
 }
-
 const void *OBJ_bsearch_ex_(const void *key, const void *base_, int num,
                             int size,
                             int (*cmp) (const void *, const void *),
@@ -599,7 +599,7 @@ const void *OBJ_bsearch_ex_(const void *key, const void *base_, int num,
     while (l < h) {
         i = (l + h) / 2;
         p = &(base[i * size]);
-        c = (*cmp) (key, p);
+        c = (*cmp) (key, p);       /* =0表示查找到元素 */
         if (c < 0)
             h = i;
         else if (c > 0)
@@ -623,13 +623,13 @@ const void *OBJ_bsearch_ex_(const void *key, const void *base_, int num,
     }
 #endif
     if (c != 0 && !(flags & OBJ_BSEARCH_VALUE_ON_NOMATCH))
-        p = NULL;
+        p = NULL;/* 未匹配，但返回其值 */
     else if (c == 0 && (flags & OBJ_BSEARCH_FIRST_VALUE_ON_MATCH)) {
         while (i > 0 && (*cmp) (key, &(base[(i - 1) * size])) == 0)
-            i--;
+            i--; /* 查找第一个匹配的结果，因为已排序，顺次向前直到不匹配即可 */
         p = &(base[i * size]);
     }
-    return (p);
+    return (p);  /* 返回查找到的元素地址 */
 }
 
 int OBJ_create_objects(BIO *in)

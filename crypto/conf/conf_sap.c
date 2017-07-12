@@ -35,18 +35,21 @@ void OPENSSL_config(const char *appname)
 }
 #endif
 
+/* 加载配置信息 */
 void openssl_config_int(const char *appname)
 {
     if (openssl_configured)
         return;
 
+    /* 加载内置模块儿 */
     OPENSSL_load_builtin_modules();
 #ifndef OPENSSL_NO_ENGINE
-    /* Need to load ENGINEs */
+    /* 加载硬件引擎，Need to load ENGINEs */
     ENGINE_load_builtin_engines();
 #endif
     ERR_clear_error();
 #ifndef OPENSSL_SYS_UEFI
+    /* 动态加载模块儿 */
     CONF_modules_load_file(NULL, appname,
                                CONF_MFLAGS_DEFAULT_SECTION |
                                CONF_MFLAGS_IGNORE_MISSING_FILE);

@@ -51,6 +51,7 @@ struct conf_imodule_st {
     void *usr_data;
 };
 
+/* openssl支持的模块儿，链表 */
 static STACK_OF(CONF_MODULE) *supported_modules = NULL;
 static STACK_OF(CONF_IMODULE) *initialized_modules = NULL;
 
@@ -68,7 +69,8 @@ static CONF_MODULE *module_load_dso(const CONF *cnf, const char *name,
                                     const char *value);
 
 /* Main function: load modules from a CONF structure */
-
+/* 根据配置加载相应的模块，动态加载，
+   主要针对压缩函数(ssl协议)和engine(硬件加速引擎) */
 int CONF_modules_load(const CONF *cnf, const char *appname,
                       unsigned long flags)
 {
@@ -81,25 +83,27 @@ int CONF_modules_load(const CONF *cnf, const char *appname,
     if (!cnf)
         return 1;
 
+    /* 查找 default::appname */
     if (appname)
         vsection = NCONF_get_string(cnf, NULL, appname);
 
+    /* 查找 default::openssl_conf */
     if (!appname || (!vsection && (flags & CONF_MFLAGS_DEFAULT_SECTION)))
         vsection = NCONF_get_string(cnf, NULL, "openssl_conf");
 
+    /* 并未设置加载模块儿段，则返回 */
     if (!vsection) {
         ERR_clear_error();
         return 1;
     }
 
+    /* 获取对应的段，并加载对应模块 */
     values = NCONF_get_section(cnf, vsection);
-
     if (!values)
         return 0;
-
     for (i = 0; i < sk_CONF_VALUE_num(values); i++) {
         vl = sk_CONF_VALUE_value(values, i);
-        ret = module_run(cnf, vl->name, vl->value, flags);
+        ret = module_run(cnf, vl->name, vl->value, flags);  /* 加载模块儿 */
         if (ret <= 0)
             if (!(flags & CONF_MFLAGS_IGNORE_ERRORS))
                 return ret;
@@ -119,6 +123,7 @@ int CONF_modules_load_file(const char *filename, const char *appname,
     if (conf == NULL)
         goto err;
 
+    /* 提取文件名 */
     if (filename == NULL) {
         file = CONF_get1_default_config_file();
         if (!file)
@@ -126,6 +131,7 @@ int CONF_modules_load_file(const char *filename, const char *appname,
     } else
         file = (char *)filename;
 
+    /* 解析配置文件，结果存储在conf中 */
     if (NCONF_load(conf, file, NULL) <= 0) {
         if ((flags & CONF_MFLAGS_IGNORE_MISSING_FILE) &&
             (ERR_GET_REASON(ERR_peek_last_error()) == CONF_R_NO_SUCH_FILE)) {
@@ -135,6 +141,7 @@ int CONF_modules_load_file(const char *filename, const char *appname,
         goto err;
     }
 
+    /* 动态加载所需模块，默认为项default::openssl_conf */
     ret = CONF_modules_load(conf, appname, flags);
 
  err:
@@ -145,6 +152,7 @@ int CONF_modules_load_file(const char *filename, const char *appname,
     return ret;
 }
 
+/* openssl支持动态加载模块儿，主要用于压缩函数(ssl协议)和engine(硬件加速引擎) */
 static int module_run(const CONF *cnf, const char *name, const char *value,
                       unsigned long flags)
 {
@@ -222,7 +230,7 @@ static CONF_MODULE *module_load_dso(const CONF *cnf,
     return NULL;
 }
 
-/* add module to list */
+/* 添加到模块儿链表，add module to list */
 static CONF_MODULE *module_add(DSO *dso, const char *name,
                                conf_init_func *ifunc, conf_finish_func *ffunc)
 {

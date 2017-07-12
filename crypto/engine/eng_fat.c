@@ -116,8 +116,10 @@ int ENGINE_register_complete(ENGINE *e)
     return 1;
 }
 
+/* 加载硬件引擎 */
 int ENGINE_register_all_complete(void)
 {
+    /* typedef struct engine_st ENGINE; */
     ENGINE *e;
 
     for (e = ENGINE_get_first(); e; e = ENGINE_get_next(e))

@@ -48,6 +48,8 @@ static int file_gets(BIO *h, char *str, int size);
 static long file_ctrl(BIO *h, int cmd, long arg1, void *arg2);
 static int file_new(BIO *h);
 static int file_free(BIO *data);
+
+/* 文件类型的BIO接口 */
 static const BIO_METHOD methods_filep = {
     BIO_TYPE_FILE,
     "FILE pointer",
@@ -65,10 +67,11 @@ static const BIO_METHOD methods_filep = {
     NULL,
 };
 
+/* 利用文件名，构建BIO结构 */
 BIO *BIO_new_file(const char *filename, const char *mode)
 {
     BIO  *ret;
-    FILE *file = openssl_fopen(filename, mode);
+    FILE *file = openssl_fopen(filename, mode);  /* fopen() */
     int fp_flags = BIO_CLOSE;
 
     if (strchr(mode, 'b') == NULL)
@@ -98,19 +101,24 @@ BIO *BIO_new_file(const char *filename, const char *mode)
     return (ret);
 }
 
+/* 依据FILE*句柄构建对应的BIO结构，因为本开源程序对外IO统一利用BIO封装 */
 BIO *BIO_new_fp(FILE *stream, int close_flag)
 {
     BIO *ret;
 
+    /* 构建文件类型BIO，对应操控集合 methods_filep */
     if ((ret = BIO_new(BIO_s_file())) == NULL)
         return (NULL);
 
     /* redundant flag, left for documentation purposes */
     BIO_set_flags(ret, BIO_FLAGS_UPLINK);
+    
+    /* 设置底层FD */
     BIO_set_fp(ret, stream, close_flag);
     return (ret);
 }
 
+/* 获取文件型BIO操控API */
 const BIO_METHOD *BIO_s_file(void)
 {
     return (&methods_filep);
@@ -184,6 +192,7 @@ static int file_write(BIO *b, const char *in, int inl)
     return (ret);
 }
 
+/* 文件类型BIO的操控函数 */
 static long file_ctrl(BIO *b, int cmd, long num, void *ptr)
 {
     long ret = 1;
@@ -212,7 +221,7 @@ static long file_ctrl(BIO *b, int cmd, long num, void *ptr)
         else
             ret = ftell(fp);
         break;
-    case BIO_C_SET_FILE_PTR:
+    case BIO_C_SET_FILE_PTR:    /* 设置BIO对应的底层FD */
         file_free(b);
         b->shutdown = (int)num & BIO_CLOSE;
         b->ptr = ptr;
@@ -290,7 +299,7 @@ static long file_ctrl(BIO *b, int cmd, long num, void *ptr)
         else
             strcat(p, "t");
 #  endif
-        fp = openssl_fopen(ptr, p);
+        fp = openssl_fopen(ptr, p);     /* 简单fopen() */
         if (fp == NULL) {
             SYSerr(SYS_F_FOPEN, get_last_sys_error());
             ERR_add_error_data(5, "fopen('", ptr, "','", p, "')");
@@ -298,7 +307,7 @@ static long file_ctrl(BIO *b, int cmd, long num, void *ptr)
             ret = 0;
             break;
         }
-        b->ptr = fp;
+        b->ptr = fp;                    /* 赋值 */
         b->init = 1;
         BIO_clear_flags(b, BIO_FLAGS_UPLINK); /* we did fopen -> we disengage
                                                * UPLINK */
@@ -316,7 +325,7 @@ static long file_ctrl(BIO *b, int cmd, long num, void *ptr)
     case BIO_CTRL_SET_CLOSE:
         b->shutdown = (int)num;
         break;
-    case BIO_CTRL_FLUSH:
+    case BIO_CTRL_FLUSH:        /* 刷新缓存数据 */
         if (b->flags & BIO_FLAGS_UPLINK)
             UP_fflush(b->ptr);
         else

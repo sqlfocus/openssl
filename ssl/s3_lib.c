@@ -3906,19 +3906,20 @@ int ssl3_write(SSL *s, const void *buf, size_t len, size_t *written)
         ssl3_renegotiate_check(s, 0);
 
     return s->method->ssl_write_bytes(s, SSL3_RT_APPLICATION_DATA, buf, len,
-                                      written);
+                                      written);  /* =ssl3_write_bytes() */
 }
 
+/* 最终SSL_read()的执行函数 */
 static int ssl3_read_internal(SSL *s, void *buf, size_t len, int peek,
                               size_t *readbytes)
 {
     int ret;
 
     clear_sys_error();
-    if (s->s3->renegotiate)
+    if (s->s3->renegotiate)            /* 触发重协商 */
         ssl3_renegotiate_check(s, 0);
     s->s3->in_read_app_data = 1;
-    ret =
+    ret =                              /* =ssl3_read_bytes() */
         s->method->ssl_read_bytes(s, SSL3_RT_APPLICATION_DATA, NULL, buf, len,
                                   peek, readbytes);
     if ((ret == -1) && (s->s3->in_read_app_data == 2)) {

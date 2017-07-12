@@ -367,6 +367,8 @@ static int ssl_set_cert(CERT *c, X509 *x)
     return 1;
 }
 
+/* 从文件加载公钥证书
+   @param type: 证书类型，如 SSL_FILETYPE_PEM */
 int SSL_CTX_use_certificate_file(SSL_CTX *ctx, const char *file, int type)
 {
     int j;
@@ -374,16 +376,20 @@ int SSL_CTX_use_certificate_file(SSL_CTX *ctx, const char *file, int type)
     int ret = 0;
     X509 *x = NULL;
 
+    /* 新建BIO对象 */
     in = BIO_new(BIO_s_file());
     if (in == NULL) {
         SSLerr(SSL_F_SSL_CTX_USE_CERTIFICATE_FILE, ERR_R_BUF_LIB);
         goto end;
     }
 
+    /* 初始化底层FD，对应需要读取的文件 */
     if (BIO_read_filename(in, file) <= 0) {
         SSLerr(SSL_F_SSL_CTX_USE_CERTIFICATE_FILE, ERR_R_SYS_LIB);
         goto end;
     }
+
+    /* 读取文件，并根据文件内容类型解析 */
     if (type == SSL_FILETYPE_ASN1) {
         j = ERR_R_ASN1_LIB;
         x = d2i_X509_bio(in, NULL);
@@ -401,6 +407,7 @@ int SSL_CTX_use_certificate_file(SSL_CTX *ctx, const char *file, int type)
         goto end;
     }
 
+    /* 加载证书 */
     ret = SSL_CTX_use_certificate(ctx, x);
  end:
     X509_free(x);

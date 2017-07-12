@@ -122,6 +122,7 @@ extern const OPTIONS verify_options[];
 extern const OPTIONS version_options[];
 extern const OPTIONS x509_options[];
 
+/* openssl命令支持的子程序，如openssl ca ... */
 #ifdef INCLUDE_FUNCTION_TABLE
 static FUNCTION functions[] = {
     {FT_general, "asn1parse", asn1parse_main, asn1parse_options},
@@ -187,10 +188,10 @@ static FUNCTION functions[] = {
     {FT_general, "rsautl", rsautl_main, rsautl_options},
 #endif
 #ifndef OPENSSL_NO_SOCK
-    {FT_general, "s_client", s_client_main, s_client_options},
+    {FT_general, "s_client", s_client_main, s_client_options},  /* 仿真客户端, openssl s_client ... */
 #endif
 #ifndef OPENSSL_NO_SOCK
-    {FT_general, "s_server", s_server_main, s_server_options},
+    {FT_general, "s_server", s_server_main, s_server_options},  /* 仿真服务器, openssl s_server ... */
 #endif
 #ifndef OPENSSL_NO_SOCK
     {FT_general, "s_time", s_time_main, s_time_options},

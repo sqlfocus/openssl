@@ -215,6 +215,7 @@ extern "C" {
 extern "C" {
 #endif
 
+/* 公钥证书类型 */
 # define SSL_FILETYPE_ASN1       X509_FILETYPE_ASN1
 # define SSL_FILETYPE_PEM        X509_FILETYPE_PEM
 

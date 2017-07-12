@@ -8,10 +8,10 @@
  */
 
 #include <openssl/bio.h>
-
+/* 参考 methods_filep */
 struct bio_method_st {
-    int type;
-    const char *name;
+    int type;               /* 对象类型, BIO_TYPE_FILE */
+    const char *name;       /* 对象名称 */
     int (*bwrite) (BIO *, const char *, size_t, size_t *);
     int (*bwrite_old) (BIO *, const char *, int);
     int (*bread) (BIO *, char *, size_t, size_t *);

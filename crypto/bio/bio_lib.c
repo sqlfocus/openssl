@@ -69,10 +69,10 @@ static long bio_call_callback(BIO *b, int oper, const char *argp, size_t len,
     return ret;
 }
 
+/* 创建BIO对象 *//* typedef struct bio_st BIO; */
 BIO *BIO_new(const BIO_METHOD *method)
 {
     BIO *bio = OPENSSL_zalloc(sizeof(*bio));
-
     if (bio == NULL) {
         BIOerr(BIO_F_BIO_NEW, ERR_R_MALLOC_FAILURE);
         return (NULL);
@@ -82,9 +82,11 @@ BIO *BIO_new(const BIO_METHOD *method)
     bio->shutdown = 1;
     bio->references = 1;
 
+    /*  */
     if (!CRYPTO_new_ex_data(CRYPTO_EX_INDEX_BIO, bio, &bio->ex_data))
         goto err;
 
+    /* 锁 */
     bio->lock = CRYPTO_THREAD_lock_new();
     if (bio->lock == NULL) {
         BIOerr(BIO_F_BIO_NEW, ERR_R_MALLOC_FAILURE);
@@ -92,6 +94,7 @@ BIO *BIO_new(const BIO_METHOD *method)
         goto err;
     }
 
+    /* 初始化底层句柄, methods_filep 为 file_new() */
     if (method->create != NULL && !method->create(bio)) {
         BIOerr(BIO_F_BIO_NEW, ERR_R_INIT_FAIL);
         CRYPTO_free_ex_data(CRYPTO_EX_INDEX_BIO, bio, &bio->ex_data);
@@ -206,6 +209,7 @@ BIO_callback_fn BIO_get_callback(const BIO *b)
     return b->callback;
 }
 
+/* 设置BIO过滤函数 */
 void BIO_set_callback(BIO *b, BIO_callback_fn cb)
 {
     b->callback = cb;
@@ -216,6 +220,7 @@ BIO_callback_fn_ex BIO_get_callback_ex(const BIO *b)
     return b->callback_ex;
 }
 
+/* 设置BIO过滤函数 */
 void BIO_set_callback_ex(BIO *b, BIO_callback_fn_ex cb)
 {
     b->callback_ex = cb;
@@ -506,6 +511,11 @@ void *BIO_ptr_ctrl(BIO *b, int cmd, long larg)
         return (p);
 }
 
+/* BIO的操控函数入口
+   @param cmd: 命令, BIO_C_SET_FILENAME
+   @param larg: 子命令, BIO_FP_READ
+   @param parg: 文件名
+ */
 long BIO_ctrl(BIO *b, int cmd, long larg, void *parg)
 {
     long ret;
@@ -518,14 +528,17 @@ long BIO_ctrl(BIO *b, int cmd, long larg, void *parg)
         return -2;
     }
 
+    /* 执行前，调用设定的回调 */
     if (b->callback != NULL || b->callback_ex != NULL) {
         ret = bio_call_callback(b, BIO_CB_CTRL, parg, 0, cmd, larg, 1L, NULL);
         if (ret <= 0)
             return ret;
     }
 
+    /* methods_filep 为 file_ctrl() */
     ret = b->method->ctrl(b, cmd, larg, parg);
 
+    /* 执行后，调用设定的回调 */
     if (b->callback != NULL || b->callback_ex != NULL)
         ret = bio_call_callback(b, BIO_CB_CTRL | BIO_CB_RETURN, parg, 0, cmd,
                                 larg, ret, NULL);

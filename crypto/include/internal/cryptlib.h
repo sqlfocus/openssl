@@ -40,7 +40,7 @@ typedef struct mem_st MEM;
 DEFINE_LHASH_OF(MEM);
 
 # ifndef OPENSSL_SYS_VMS
-#  define X509_CERT_AREA          OPENSSLDIR
+#  define X509_CERT_AREA          OPENSSLDIR               /* 在Makefile中定义，编译时传入 */
 #  define X509_CERT_DIR           OPENSSLDIR "/certs"
 #  define X509_CERT_FILE          OPENSSLDIR "/cert.pem"
 #  define X509_PRIVATE_DIR        OPENSSLDIR "/private"

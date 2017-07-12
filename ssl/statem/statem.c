@@ -298,7 +298,7 @@ static int state_machine(SSL *s, int server)
 
     cb = get_callback(s);
 
-    st->in_handshake++;                /* 握手计数 */
+    st->in_handshake++;
     if (!SSL_in_init(s) || SSL_in_before(s)) {
         if (!SSL_clear(s))             /* 程序初始启动，清理握手信息 */
             return -1;

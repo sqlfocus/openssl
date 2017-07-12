@@ -806,6 +806,7 @@ static int new_session_cb(SSL *S, SSL_SESSION *sess)
     return 0;
 }
 
+/* openssl s_client命令入口，用于仿真客户端 */
 int s_client_main(int argc, char **argv)
 {
     BIO *sbio;

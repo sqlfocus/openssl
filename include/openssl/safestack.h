@@ -17,8 +17,13 @@
 extern "C" {
 #endif
 
+    /* 定义自定义栈类型；基础栈数据结构 struct stack_st */
 # define STACK_OF(type) struct stack_st_##type
 
+    /* 自定义栈操控函数集合的封装宏
+       @param t1: 用于构建自定义栈名
+       @param t2: 待存储的数据类型
+       @param t3: 自定义函数指针参数类型，一般为t2 */
 # define SKM_DEFINE_STACK_OF(t1, t2, t3) \
     STACK_OF(t1); \
     typedef int (*sk_##t1##_compfunc)(const t3 * const *a, const t3 *const *b); \
@@ -118,6 +123,7 @@ extern "C" {
         return (sk_##t1##_compfunc)OPENSSL_sk_set_cmp_func((OPENSSL_STACK *)sk, (OPENSSL_sk_compfunc)compare); \
     }
 
+    /* 自定义栈操控集合，@param t1: 构建栈名; @param t2: 元素类型 */
 # define DEFINE_SPECIAL_STACK_OF(t1, t2) SKM_DEFINE_STACK_OF(t1, t2, t2)
 # define DEFINE_STACK_OF(t) SKM_DEFINE_STACK_OF(t, t, t)
 # define DEFINE_SPECIAL_STACK_OF_CONST(t1, t2) \

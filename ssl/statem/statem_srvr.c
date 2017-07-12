@@ -3059,6 +3059,7 @@ static int tls_process_cke_gost(SSL *s, PACKET *pkt, int *al)
 #endif
 }
 
+/* 处理消息Client Key Exchange */
 MSG_PROCESS_RETURN tls_process_client_key_exchange(SSL *s, PACKET *pkt)
 {
     int al = -1;
@@ -3084,7 +3085,7 @@ MSG_PROCESS_RETURN tls_process_client_key_exchange(SSL *s, PACKET *pkt)
             SSLerr(SSL_F_TLS_PROCESS_CLIENT_KEY_EXCHANGE, ERR_R_INTERNAL_ERROR);
             goto err;
         }
-    } else if (alg_k & (SSL_kRSA | SSL_kRSAPSK)) {
+    } else if (alg_k & (SSL_kRSA | SSL_kRSAPSK)) {     /* RSA */
         if (!tls_process_cke_rsa(s, pkt, &al))
             goto err;
     } else if (alg_k & (SSL_kDHE | SSL_kDHEPSK)) {

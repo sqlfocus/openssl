@@ -1577,7 +1577,7 @@ int ssl_read_internal(SSL *s, void *buf, size_t num, size_t *readbytes)
         *readbytes = s->asyncrw;
         return ret;
     } else {
-        return s->method->ssl_read(s, buf, num, readbytes);
+        return s->method->ssl_read(s, buf, num, readbytes); /* ssl3_read() */
     }
 }
 
@@ -1768,7 +1768,7 @@ int ssl_write_internal(SSL *s, const void *buf, size_t num, size_t *written)
         *written = s->asyncrw;
         return ret;
     } else {
-        return s->method->ssl_write(s, buf, num, written);
+        return s->method->ssl_write(s, buf, num, written);  /* ssl3_write() */
     }
 }
 

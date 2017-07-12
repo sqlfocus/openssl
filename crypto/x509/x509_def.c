@@ -17,6 +17,7 @@ const char *X509_get_default_private_dir(void)
     return (X509_PRIVATE_DIR);
 }
 
+/* 通过OPENSSLDIR传入的openssl证书、配置等所在的根目录 */
 const char *X509_get_default_cert_area(void)
 {
     return (X509_CERT_AREA);
