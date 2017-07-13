@@ -531,6 +531,7 @@ int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)
             && !RUN_ONCE(&add_all_ciphers, ossl_init_no_add_algs))
         return 0;
 
+    /* 加载加密套件 */
     if ((opts & OPENSSL_INIT_ADD_ALL_CIPHERS)
             && !RUN_ONCE(&add_all_ciphers, ossl_init_add_all_ciphers))
         return 0;

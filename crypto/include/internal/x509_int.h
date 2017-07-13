@@ -142,6 +142,7 @@ struct x509_cinf_st {
     ASN1_ENCODING enc;
 };
 
+/* X509证书信息结构 */
 struct x509_st {
     X509_CINF cert_info;
     X509_ALGOR sig_alg;

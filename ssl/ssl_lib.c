@@ -641,14 +641,15 @@ SSL *SSL_new(SSL_CTX *ctx)
     s->default_passwd_callback = ctx->default_passwd_callback;
     s->default_passwd_callback_userdata = ctx->default_passwd_callback_userdata;
 
-    s->method = ctx->method;
+    s->method = ctx->method;        /* 继承TLS API */
 
     s->key_update = SSL_KEY_UPDATE_NONE;
 
-    if (!s->method->ssl_new(s))
+    if (!s->method->ssl_new(s))     /* 初始化 */
         goto err;
 
     s->server = (ctx->method->ssl_accept == ssl_undefined_function) ? 0 : 1;
+                                    /* 设置服务器标识 */
 
     if (!SSL_clear(s))
         goto err;
@@ -2634,7 +2635,7 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *meth)
         return (NULL);
     }
 
-    /* 基础初始化，如加载算法等 */
+    /* 加载错误信息所需的字符串信息 */
     if (!OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL))
         return NULL;
 

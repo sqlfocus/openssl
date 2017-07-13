@@ -53,7 +53,7 @@ typedef unsigned int u_int;
  * found in *sock on success, it will be given INVALID_SOCKET otherwise.
  *
  * Returns 1 on success, 0 on failure.
- */
+ *//* 调用socket()/connect()连接服务器 */
 int init_client(int *sock, const char *host, const char *port,
                 int family, int type)
 {
@@ -64,12 +64,14 @@ int init_client(int *sock, const char *host, const char *port,
     if (!BIO_sock_init())
         return 0;
 
+    /* 域名解析 */
     ret = BIO_lookup(host, port, BIO_LOOKUP_CLIENT, family, type, &res);
     if (ret == 0) {
         ERR_print_errors(bio_err);
         return 0;
     }
-
+    
+    /* 遍历连接所有解析结果，直到有一个成功 */
     ret = 0;
     for (ai = res; ai != NULL; ai = BIO_ADDRINFO_next(ai)) {
         /* Admittedly, these checks are quite paranoid, we should not get

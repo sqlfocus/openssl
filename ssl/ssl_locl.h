@@ -693,12 +693,12 @@ DEFINE_LHASH_OF(X509_NAME);
 # define TLSEXT_KEYNAME_LENGTH 16
 
 struct ssl_ctx_st {
-    const SSL_METHOD *method;
+    const SSL_METHOD *method;                /* 特定TLS版本的API */
     STACK_OF(SSL_CIPHER) *cipher_list;
     /* same as above but sorted for lookup */
     STACK_OF(SSL_CIPHER) *cipher_list_by_id;
     struct x509_store_st /* X509_STORE */ *cert_store;
-    LHASH_OF(SSL_SESSION) *sessions;
+    LHASH_OF(SSL_SESSION) *sessions;         /* 存储会话，用于会话恢复 */
     /*
      * Most session-ids that will be cached, default is
      * SSL_SESSION_CACHE_MAX_SIZE_DEFAULT. 0 is unlimited.
@@ -800,7 +800,7 @@ struct ssl_ctx_st {
 
     uint32_t options;
     uint32_t mode;
-    int min_proto_version;
+    int min_proto_version;   /* */
     int max_proto_version;
     size_t max_cert_list;
 

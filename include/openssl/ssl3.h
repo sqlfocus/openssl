@@ -160,7 +160,7 @@ extern "C" {
 
 # define SSL3_RT_MAX_EXTRA                       (16384)
 
-/* Maximum plaintext length: defined by SSL/TLS standards */
+/* 最大记录长度，2^14, Maximum plaintext length: defined by SSL/TLS standards */
 # define SSL3_RT_MAX_PLAIN_LENGTH                16384
 /* Maximum compression overhead: defined by SSL/TLS standards */
 # define SSL3_RT_MAX_COMPRESSED_OVERHEAD         1024

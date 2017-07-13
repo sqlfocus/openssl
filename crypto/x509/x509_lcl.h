@@ -14,7 +14,7 @@
  * including an X509_VERIFY_PARAM structure in related structures the
  * parameters used can be customized
  */
-
+/* 存放证书链验证相关的参数 */
 struct X509_VERIFY_PARAM_st {
     char *name;
     time_t check_time;          /* Time to use */

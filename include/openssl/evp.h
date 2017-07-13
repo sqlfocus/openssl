@@ -378,8 +378,8 @@ typedef struct {
 # define EVP_CHACHAPOLY_TLS_TAG_LEN                      16
 
 typedef struct evp_cipher_info_st {
-    const EVP_CIPHER *cipher;
-    unsigned char iv[EVP_MAX_IV_LENGTH];
+    const EVP_CIPHER *cipher;             /* 加密套件 */
+    unsigned char iv[EVP_MAX_IV_LENGTH];  /* 算法初始化向量，可有可无 */
 } EVP_CIPHER_INFO;
 
 

@@ -139,8 +139,7 @@ static int check_pem(const char *nm, const char *name)
     if (strcmp(nm, name) == 0)
         return 1;
 
-    /* Make PEM_STRING_EVP_PKEY match any private key */
-
+    /* 私钥PEM文件，Make PEM_STRING_EVP_PKEY match any private key */
     if (strcmp(name, PEM_STRING_EVP_PKEY) == 0) {
         int slen;
         const EVP_PKEY_ASN1_METHOD *ameth;
@@ -228,6 +227,7 @@ static int check_pem(const char *nm, const char *name)
     return 0;
 }
 
+/* 读取PEM，并解密 */
 int PEM_bytes_read_bio(unsigned char **pdata, long *plen, char **pnm,
                        const char *name, BIO *bp, pem_password_cb *cb,
                        void *u)
@@ -238,20 +238,25 @@ int PEM_bytes_read_bio(unsigned char **pdata, long *plen, char **pnm,
     long len;
     int ret = 0;
 
+    /* 读取PEM文件，并base64解码 */
     for (;;) {
         if (!PEM_read_bio(bp, &nm, &header, &data, &len)) {
             if (ERR_GET_REASON(ERR_peek_error()) == PEM_R_NO_START_LINE)
                 ERR_add_error_data(2, "Expecting: ", name);
             return 0;
         }
-        if (check_pem(nm, name))
+        if (check_pem(nm, name))   /* 校验封装名 */
             break;
         OPENSSL_free(nm);
         OPENSSL_free(header);
         OPENSSL_free(data);
     }
+    
+    /* 解析封装头，获取加密套件及初始化向量 */
     if (!PEM_get_EVP_CIPHER_INFO(header, &cipher))
         goto err;
+    
+    /* 解密 */
     if (!PEM_do_header(&cipher, data, &len, cb, u))
         goto err;
 
@@ -389,6 +394,7 @@ int PEM_ASN1_write_bio(i2d_of_void *i2d, const char *name, BIO *bp,
     return (ret);
 }
 
+/* 解密PEM数据体 */
 int PEM_do_header(EVP_CIPHER_INFO *cipher, unsigned char *data, long *plen,
                   pem_password_cb *callback, void *u)
 {
@@ -408,6 +414,7 @@ int PEM_do_header(EVP_CIPHER_INFO *cipher, unsigned char *data, long *plen,
     }
 #endif
 
+    /* 获取解密密码 */
     if (cipher->cipher == NULL)
         return 1;
     if (callback == NULL)
@@ -422,15 +429,14 @@ int PEM_do_header(EVP_CIPHER_INFO *cipher, unsigned char *data, long *plen,
     /* Convert the pass phrase from EBCDIC */
     ebcdic2ascii(buf, buf, keylen);
 #endif
-
     if (!EVP_BytesToKey(cipher->cipher, EVP_md5(), &(cipher->iv[0]),
                         (unsigned char *)buf, keylen, 1, key, NULL))
         return 0;
 
+    /* 解密 */
     ctx = EVP_CIPHER_CTX_new();
     if (ctx == NULL)
         return 0;
-
     ok = EVP_DecryptInit_ex(ctx, cipher->cipher, NULL, key, &(cipher->iv[0]));
     if (ok)
         ok = EVP_DecryptUpdate(ctx, data, &ilen, data, ilen);
@@ -439,6 +445,8 @@ int PEM_do_header(EVP_CIPHER_INFO *cipher, unsigned char *data, long *plen,
         *plen = ilen;
         ok = EVP_DecryptFinal_ex(ctx, &(data[ilen]), &ilen);
     }
+
+    /* 设置返回值 */
     if (ok)
         *plen += ilen;
     else
@@ -461,12 +469,12 @@ int PEM_do_header(EVP_CIPHER_INFO *cipher, unsigned char *data, long *plen,
  * headers we care about.  This is overkill for just this limited use-case, but
  * presumably we also parse rfc822-style headers for S/MIME, so a common
  * abstraction might well be more generally useful.
- */
+ *//* 解析封装头，获取加密套件 */
 int PEM_get_EVP_CIPHER_INFO(char *header, EVP_CIPHER_INFO *cipher)
 {
-    static const char ProcType[] = "Proc-Type:";
-    static const char ENCRYPTED[] = "ENCRYPTED";
-    static const char DEKInfo[] = "DEK-Info:";
+    static const char ProcType[] = "Proc-Type:";  /* PEM文件被执行的操作 */
+    static const char ENCRYPTED[] = "ENCRYPTED";  /* 执行了加密操作 */
+    static const char DEKInfo[] = "DEK-Info:";    /* 描述加速算法及模式 */
     const EVP_CIPHER *enc = NULL;
     int ivlen;
     char *dekinfostart, c;
@@ -475,6 +483,7 @@ int PEM_get_EVP_CIPHER_INFO(char *header, EVP_CIPHER_INFO *cipher)
     if ((header == NULL) || (*header == '\0') || (*header == '\n'))
         return 1;
 
+    /* 如果有封装头，则第一个必须是Proc-Type */
     if (strncmp(header, ProcType, sizeof(ProcType)-1) != 0) {
         PEMerr(PEM_F_PEM_GET_EVP_CIPHER_INFO, PEM_R_NOT_PROC_TYPE);
         return 0;
@@ -482,11 +491,12 @@ int PEM_get_EVP_CIPHER_INFO(char *header, EVP_CIPHER_INFO *cipher)
     header += sizeof(ProcType)-1;
     header += strspn(header, " \t");
 
-    if (*header++ != '4' || *header++ != ',')
+    if (*header++ != '4' || *header++ != ',')  /* 第一个属性值为4 */
         return 0;
     header += strspn(header, " \t");
 
-    /* We expect "ENCRYPTED" followed by optional white-space + line break */
+    /* Proc-Type第二个属性值，应该为ENCRYPTED；
+       We expect "ENCRYPTED" followed by optional white-space + line break */
     if (strncmp(header, ENCRYPTED, sizeof(ENCRYPTED)-1) != 0 ||
         strspn(header+sizeof(ENCRYPTED)-1, " \t\r\n") == 0) {
         PEMerr(PEM_F_PEM_GET_EVP_CIPHER_INFO, PEM_R_NOT_ENCRYPTED);
@@ -502,7 +512,7 @@ int PEM_get_EVP_CIPHER_INFO(char *header, EVP_CIPHER_INFO *cipher)
     /*-
      * https://tools.ietf.org/html/rfc1421#section-4.6.1.3
      * We expect "DEK-Info: algo[,hex-parameters]"
-     */
+     *//* 第二个封装头必须是DEK-Info */
     if (strncmp(header, DEKInfo, sizeof(DEKInfo)-1) != 0) {
         PEMerr(PEM_F_PEM_GET_EVP_CIPHER_INFO, PEM_R_NOT_DEK_INFO);
         return 0;
@@ -517,11 +527,10 @@ int PEM_get_EVP_CIPHER_INFO(char *header, EVP_CIPHER_INFO *cipher)
     dekinfostart = header;
     header += strcspn(header, " \t,");
     c = *header;
-    *header = '\0';
+    *header = '\0';                        /* 获取加密算法 */
     cipher->cipher = enc = EVP_get_cipherbyname(dekinfostart);
     *header = c;
     header += strspn(header, " \t");
-
     if (enc == NULL) {
         PEMerr(PEM_F_PEM_GET_EVP_CIPHER_INFO, PEM_R_UNSUPPORTED_ENCRYPTION);
         return 0;
@@ -534,7 +543,7 @@ int PEM_get_EVP_CIPHER_INFO(char *header, EVP_CIPHER_INFO *cipher)
         PEMerr(PEM_F_PEM_GET_EVP_CIPHER_INFO, PEM_R_UNEXPECTED_DEK_IV);
         return 0;
     }
-
+                                           /* 加载初始化向量 */
     if (!load_iv(&header, cipher->iv, EVP_CIPHER_iv_length(enc)))
         return 0;
 
@@ -683,22 +692,22 @@ int PEM_read_bio(BIO *bp, char **name, char **header, unsigned char **data,
         goto err;
     }
 
+    /* 获取起始封装边界名 */
     buf[254] = '\0';
     for (;;) {
-        i = BIO_gets(bp, buf, 254);
-
+        i = BIO_gets(bp, buf, 254);    /* 每次读取254字节 */
         if (i <= 0) {
             PEMerr(PEM_F_PEM_READ_BIO, PEM_R_NO_START_LINE);
             goto err;
         }
 
         while ((i >= 0) && (buf[i] <= ' '))
-            i--;
+            i--;                       /* 丢弃非打印字符 */
         buf[++i] = '\n';
         buf[++i] = '\0';
 
         if (strncmp(buf, "-----BEGIN ", 11) == 0) {
-            i = strlen(&(buf[11]));
+            i = strlen(&(buf[11]));    /* 获取封装边界名 */
 
             if (strncmp(&(buf[11 + i - 6]), "-----\n", 6) != 0)
                 continue;
@@ -711,6 +720,8 @@ int PEM_read_bio(BIO *bp, char **name, char **header, unsigned char **data,
             break;
         }
     }
+
+    /* 获取PEM封装头信息 */
     hl = 0;
     if (!BUF_MEM_grow(headerB, 256)) {
         PEMerr(PEM_F_PEM_READ_BIO, ERR_R_MALLOC_FAILURE);
@@ -727,14 +738,14 @@ int PEM_read_bio(BIO *bp, char **name, char **header, unsigned char **data,
         buf[++i] = '\n';
         buf[++i] = '\0';
 
-        if (buf[0] == '\n')
+        if (buf[0] == '\n')       /* 空白行做为封装头与内容的分隔 */
             break;
         if (!BUF_MEM_grow(headerB, hl + i + 9)) {
             PEMerr(PEM_F_PEM_READ_BIO, ERR_R_MALLOC_FAILURE);
             goto err;
         }
         if (strncmp(buf, "-----END ", 9) == 0) {
-            nohead = 1;
+            nohead = 1;           /* 直接遇到封装尾，表示无封装头 */
             break;
         }
         memcpy(&(headerB->data[hl]), buf, i);
@@ -742,13 +753,14 @@ int PEM_read_bio(BIO *bp, char **name, char **header, unsigned char **data,
         hl += i;
     }
 
+    /* 提取封装信息体 */
     bl = 0;
     if (!BUF_MEM_grow(dataB, 1024)) {
         PEMerr(PEM_F_PEM_READ_BIO, ERR_R_MALLOC_FAILURE);
         goto err;
     }
     dataB->data[0] = '\0';
-    if (!nohead) {
+    if (!nohead) {       /* 有封装头 */
         for (;;) {
             i = BIO_gets(bp, buf, 254);
             if (i <= 0)
@@ -786,12 +798,14 @@ int PEM_read_bio(BIO *bp, char **name, char **header, unsigned char **data,
                 break;
             }
         }
-    } else {
+    } else {             /* 无封装头 */
         tmpB = headerB;
         headerB = dataB;
         dataB = tmpB;
         bl = hl;
     }
+
+    /* 尾端格式检验 */
     i = strlen(nameB->data);
     if ((strncmp(buf, "-----END ", 9) != 0) ||
         (strncmp(nameB->data, &(buf[9]), i) != 0) ||
@@ -800,6 +814,7 @@ int PEM_read_bio(BIO *bp, char **name, char **header, unsigned char **data,
         goto err;
     }
 
+    /* base64解码，注意三段式EVP_xxxInit/EVP_xxxUpdate/EVP_xxxFinal() */
     EVP_DecodeInit(ctx);
     i = EVP_DecodeUpdate(ctx,
                          (unsigned char *)dataB->data, &bl,
@@ -813,14 +828,16 @@ int PEM_read_bio(BIO *bp, char **name, char **header, unsigned char **data,
         PEMerr(PEM_F_PEM_READ_BIO, PEM_R_BAD_BASE64_DECODE);
         goto err;
     }
-    bl += k;
+    bl += k;         /* 解码后数据长度 */
 
     if (bl == 0)
         goto err;
-    *name = nameB->data;
-    *header = headerB->data;
+
+    /* 设置返回值 */
+    *name = nameB->data;      /* 封装名 */
+    *header = headerB->data;  /* 封装头 */
     *data = (unsigned char *)dataB->data;
-    *len = bl;
+    *len = bl;                /* 封装体 */
     OPENSSL_free(nameB);
     OPENSSL_free(headerB);
     OPENSSL_free(dataB);

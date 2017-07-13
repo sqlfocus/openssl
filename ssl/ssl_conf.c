@@ -68,13 +68,10 @@ typedef struct {
 /*
  * Opaque structure containing SSL configuration context.
  */
-
+/* OPENSSL配置信息 */
 struct ssl_conf_ctx_st {
-    /*
-     * Various flags indicating (among other things) which options we will
-     * recognise.
-     */
-    unsigned int flags;
+    /* Various flags indicating (among other things) which options we will recognise */
+    unsigned int flags;  /* 如 SSL_CONF_FLAG_CLIENT */
     /* Prefix and length of commands */
     char *prefix;
     size_t prefixlen;
@@ -772,6 +769,7 @@ int SSL_CONF_cmd_value_type(SSL_CONF_CTX *cctx, const char *cmd)
     return SSL_CONF_TYPE_UNKNOWN;
 }
 
+/* 生成OPENSSL配置信息结构 */
 SSL_CONF_CTX *SSL_CONF_CTX_new(void)
 {
     SSL_CONF_CTX *ret = OPENSSL_zalloc(sizeof(*ret));

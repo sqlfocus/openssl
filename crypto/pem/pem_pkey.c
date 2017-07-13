@@ -22,6 +22,7 @@
 
 int pem_check_suffix(const char *pem_str, const char *suffix);
 
+/* 加载PEM格式的私钥 */
 EVP_PKEY *PEM_read_bio_PrivateKey(BIO *bp, EVP_PKEY **x, pem_password_cb *cb,
                                   void *u)
 {
@@ -32,10 +33,12 @@ EVP_PKEY *PEM_read_bio_PrivateKey(BIO *bp, EVP_PKEY **x, pem_password_cb *cb,
     int slen;
     EVP_PKEY *ret = NULL;
 
+    /* 读取PEM文件，如果指定加密封装头属性则解密 */
     if (!PEM_bytes_read_bio(&data, &len, &nm, PEM_STRING_EVP_PKEY, bp, cb, u))
         return NULL;
     p = data;
 
+    /* 解密 */
     if (strcmp(nm, PEM_STRING_PKCS8INF) == 0) {
         PKCS8_PRIV_KEY_INFO *p8inf;
         p8inf = d2i_PKCS8_PRIV_KEY_INFO(NULL, &p, len);
@@ -47,7 +50,7 @@ EVP_PKEY *PEM_read_bio_PrivateKey(BIO *bp, EVP_PKEY **x, pem_password_cb *cb,
             *x = ret;
         }
         PKCS8_PRIV_KEY_INFO_free(p8inf);
-    } else if (strcmp(nm, PEM_STRING_PKCS8) == 0) {
+    } else if (strcmp(nm, PEM_STRING_PKCS8) == 0) {   /* pkcs8私钥格式 */
         PKCS8_PRIV_KEY_INFO *p8inf;
         X509_SIG *p8;
         int klen;
@@ -64,11 +67,11 @@ EVP_PKEY *PEM_read_bio_PrivateKey(BIO *bp, EVP_PKEY **x, pem_password_cb *cb,
             X509_SIG_free(p8);
             goto err;
         }
-        p8inf = PKCS8_decrypt(p8, psbuf, klen);
+        p8inf = PKCS8_decrypt(p8, psbuf, klen);  /* 解密 */
         X509_SIG_free(p8);
         if (!p8inf)
             goto p8err;
-        ret = EVP_PKCS82PKEY(p8inf);
+        ret = EVP_PKCS82PKEY(p8inf);             /* 抽取出私钥 */
         if (x) {
             EVP_PKEY_free((EVP_PKEY *)*x);
             *x = ret;

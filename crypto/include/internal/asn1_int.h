@@ -78,8 +78,8 @@ extern const EVP_PKEY_ASN1_METHOD siphash_asn1_meth;
 # define ASN1_OBJECT_FLAG_DYNAMIC_STRINGS 0x04/* internal use */
 # define ASN1_OBJECT_FLAG_DYNAMIC_DATA    0x08/* internal use */
 struct asn1_object_st {
-    const char *sn, *ln;
-    int nid;
+    const char *sn, *ln;        /* 名称，short name/long name */
+    int nid;                    /* 索引 */
     int length;
     const unsigned char *data;  /* data remains const after init */
     int flags;                  /* Should we free this one */

@@ -79,7 +79,7 @@ static int int_x509_param_set_hosts(X509_VERIFY_PARAM *vpm, int mode,
     return 1;
 }
 
-
+/* 证书链验证配置 */
 X509_VERIFY_PARAM *X509_VERIFY_PARAM_new(void)
 {
     X509_VERIFY_PARAM *param;

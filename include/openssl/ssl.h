@@ -466,9 +466,10 @@ typedef int (*SSL_verify_cb)(int preverify_ok, X509_STORE_CTX *x509_ctx);
 /* Cert chain suitable to Suite B */
 # define CERT_PKEY_SUITEB        0x800
 
-# define SSL_CONF_FLAG_CMDLINE           0x1
+/* SSL配置环境标识, struct ssl_conf_ctx_st->flags */    
+# define SSL_CONF_FLAG_CMDLINE           0x1    /* 命令行环境 */
 # define SSL_CONF_FLAG_FILE              0x2
-# define SSL_CONF_FLAG_CLIENT            0x4
+# define SSL_CONF_FLAG_CLIENT            0x4    /* 标识角色，客户端 */
 # define SSL_CONF_FLAG_SERVER            0x8
 # define SSL_CONF_FLAG_SHOW_ERRORS       0x10
 # define SSL_CONF_FLAG_CERTIFICATE       0x20

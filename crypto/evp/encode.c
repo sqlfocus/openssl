@@ -243,7 +243,7 @@ void EVP_DecodeInit(EVP_ENCODE_CTX *ctx)
  *   - Invalid characters are detected.
  *   - There is extra trailing padding, or data after padding.
  *   - B64_EOF is detected after an incomplete base64 block.
- */
+ *//* base64解码 */
 int EVP_DecodeUpdate(EVP_ENCODE_CTX *ctx, unsigned char *out, int *outl,
                      const unsigned char *in, int inl)
 {

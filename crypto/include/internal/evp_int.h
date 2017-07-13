@@ -90,10 +90,11 @@ extern const EVP_PKEY_METHOD hkdf_pkey_meth;
 extern const EVP_PKEY_METHOD poly1305_pkey_meth;
 extern const EVP_PKEY_METHOD siphash_pkey_meth;
 
+/* 摘要算法套件信息结构 */
 struct evp_md_st {
-    int type;
-    int pkey_type;
-    int md_size;
+    int type;           /* 摘要类型，摘要算法NID */
+    int pkey_type;      /* 公钥类型，一般为签名算法NID */
+    int md_size;        /* 摘要值大小 */
     unsigned long flags;
     int (*init) (EVP_MD_CTX *ctx);
     int (*update) (EVP_MD_CTX *ctx, const void *data, size_t count);
@@ -106,12 +107,13 @@ struct evp_md_st {
     int (*md_ctrl) (EVP_MD_CTX *ctx, int cmd, int p1, void *p2);
 } /* EVP_MD */ ;
 
+/* 对称加密算法套件信息结构 */
 struct evp_cipher_st {
-    int nid;
-    int block_size;
+    int nid;           /* 对称算法nid */
+    int block_size;    /* 对称算法每次加解密的字节数 */
     /* Default value for variable length ciphers */
-    int key_len;
-    int iv_len;
+    int key_len;       /* 密钥长度 */
+    int iv_len;        /* 初始化向量长度 */
     /* Various flags */
     unsigned long flags;
     /* init key */
@@ -131,7 +133,7 @@ struct evp_cipher_st {
     /* Miscellaneous operations */
     int (*ctrl) (EVP_CIPHER_CTX *, int type, int arg, void *ptr);
     /* Application data */
-    void *app_data;
+    void *app_data;    /* 应用数据 */
 } /* EVP_CIPHER */ ;
 
 /* Macros to code block cipher wrappers */
@@ -356,10 +358,10 @@ const EVP_CIPHER *EVP_##cname##_ecb(void) { return &cname##_ecb; }
  * method, as in, can it do arbitrary encryption....
  */
 struct evp_pkey_st {
-    int type;
+    int type;            /* 类型 */
     int save_type;
     CRYPTO_REF_COUNT references;
-    const EVP_PKEY_ASN1_METHOD *ameth;
+    const EVP_PKEY_ASN1_METHOD *ameth;  /* 算法API */
     ENGINE *engine;
     union {
         void *ptr;
@@ -375,7 +377,7 @@ struct evp_pkey_st {
 # ifndef OPENSSL_NO_EC
         struct ec_key_st *ec;   /* ECC */
 # endif
-    } pkey;
+    } pkey;              /* 密钥信息 */
     int save_parameters;
     STACK_OF(X509_ATTRIBUTE) *attributes; /* [ 0 ] */
     CRYPTO_RWLOCK *lock;

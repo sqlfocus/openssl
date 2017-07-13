@@ -899,7 +899,7 @@ int s_client_main(int argc, char **argv)
     BIO *bio_c_msg = NULL;
     const char *keylog_file = NULL, *early_data_file = NULL;
 
-    FD_ZERO(&readfds);
+    FD_ZERO(&readfds);            /* 支持select() */
     FD_ZERO(&writefds);
 /* Known false-positive of MemorySanitizer. */
 #if defined(__has_feature)
@@ -909,25 +909,27 @@ int s_client_main(int argc, char **argv)
 # endif
 #endif
 
-    prog = opt_progname(argv[0]);
+    prog = opt_progname(argv[0]); /* 提取子命令名，s_client */
     c_quiet = 0;
     c_debug = 0;
     c_showcerts = 0;
     c_nbio = 0;
-    vpm = X509_VERIFY_PARAM_new();
-    cctx = SSL_CONF_CTX_new();
+    vpm = X509_VERIFY_PARAM_new();/* 证书链验证配置 */
+    cctx = SSL_CONF_CTX_new();    /* OPENSSL配置信息 */
 
     if (vpm == NULL || cctx == NULL) {
         BIO_printf(bio_err, "%s: out of memory\n", prog);
         goto end;
     }
-
+                                  /* 分配缓存，用于客户端、服务器之间交互 */
     cbuf = app_malloc(BUFSIZZ, "cbuf");
     sbuf = app_malloc(BUFSIZZ, "sbuf");
     mbuf = app_malloc(BUFSIZZ, "mbuf");
-
+    
+                                  /* 设置标识 */
     SSL_CONF_CTX_set_flags(cctx, SSL_CONF_FLAG_CLIENT | SSL_CONF_FLAG_CMDLINE);
 
+                                  /* 解析参数 */
     prog = opt_init(argc, argv, s_client_options);
     while ((o = opt_next()) != OPT_EOF) {
         /* Check for intermixing flags. */
@@ -978,15 +980,15 @@ int s_client_main(int argc, char **argv)
             count4or6++;
             break;
 #endif
-        case OPT_HOST:
+        case OPT_HOST:      /* 指定通信主机(已废弃，使用-connect) */
             connect_type = use_inet;
             freeandcopy(&host, opt_arg());
             break;
-        case OPT_PORT:
+        case OPT_PORT:      /* 指定通信端口(已废弃，使用-connect) */
             connect_type = use_inet;
             freeandcopy(&port, opt_arg());
             break;
-        case OPT_CONNECT:
+        case OPT_CONNECT:   /* -connect host:port */
             connect_type = use_inet;
             freeandcopy(&connectstr, opt_arg());
             break;
@@ -1007,16 +1009,16 @@ int s_client_main(int argc, char **argv)
         case OPT_SMTPHOST:
             ehlo = opt_arg();
             break;
-        case OPT_VERIFY:
+        case OPT_VERIFY:    /* -verify arg, 对端认证，参数为支持的证书链深度 */
             verify = SSL_VERIFY_PEER;
             verify_args.depth = atoi(opt_arg());
             if (!c_quiet)
                 BIO_printf(bio_err, "verify depth is %d\n", verify_args.depth);
             break;
-        case OPT_CERT:
+        case OPT_CERT:      /* -cert arg, 本地证书 */
             cert_file = opt_arg();
             break;
-        case OPT_NAMEOPT:
+        case OPT_NAMEOPT:   
             if (!set_nameopt(opt_arg()))
                 goto end;
             break;
@@ -1032,7 +1034,7 @@ int s_client_main(int argc, char **argv)
         case OPT_SESS_IN:
             sess_in = opt_arg();
             break;
-        case OPT_CERTFORM:
+        case OPT_CERTFORM:  /* -certform arg, 本地证书格式，默认PEM */
             if (!opt_format(opt_arg(), OPT_FMT_PEMDER, &cert_format))
                 goto opthelp;
             break;
@@ -1042,7 +1044,7 @@ int s_client_main(int argc, char **argv)
             break;
         case OPT_VERIFY_RET_ERROR:
             verify_args.return_error = 1;
-            break;
+            break;          /* -verify_return_error */
         case OPT_VERIFY_QUIET:
             verify_args.quiet = 1;
             break;
@@ -1083,7 +1085,7 @@ int s_client_main(int argc, char **argv)
         case OPT_NOCMDS:
             cmdletters = 0;
             break;
-        case OPT_ENGINE:
+        case OPT_ENGINE:    /* -engine id */
             e = setup_engine(opt_arg(), 1);
             break;
         case OPT_SSL_CLIENT_ENGINE:
@@ -1188,7 +1190,7 @@ int s_client_main(int argc, char **argv)
                 min_version = TLS1_VERSION;
             break;
 #endif
-        case OPT_SSL_CONFIG:
+        case OPT_SSL_CONFIG:/* -ssl_config */
             ssl_config = opt_arg();
             break;
         case OPT_SSL3:
@@ -1199,7 +1201,7 @@ int s_client_main(int argc, char **argv)
             min_version = TLS1_3_VERSION;
             max_version = TLS1_3_VERSION;
             break;
-        case OPT_TLS1_2:
+        case OPT_TLS1_2:    /* -tls1_2, 仅使用TLS v1.2 */
             min_version = TLS1_2_VERSION;
             max_version = TLS1_2_VERSION;
             break;
@@ -1246,23 +1248,23 @@ int s_client_main(int argc, char **argv)
         case OPT_FALLBACKSCSV:
             fallback_scsv = 1;
             break;
-        case OPT_KEYFORM:
+        case OPT_KEYFORM:   /* -keyform arg, 私钥格式，默认PEM */
             if (!opt_format(opt_arg(), OPT_FMT_PDE, &key_format))
                 goto opthelp;
             break;
-        case OPT_PASS:
+        case OPT_PASS:      /* -pass arg, 存储到硬盘的私钥的解密密码 */
             passarg = opt_arg();
             break;
-        case OPT_CERT_CHAIN:
+        case OPT_CERT_CHAIN:/* */
             chain_file = opt_arg();
             break;
-        case OPT_KEY:
+        case OPT_KEY:       /* -key arg, 私钥 */
             key_file = opt_arg();
             break;
-        case OPT_RECONNECT:
+        case OPT_RECONNECT: /* -reconnect, 断开并执行会话恢复流程 */
             reconnect = 5;
             break;
-        case OPT_CAPATH:
+        case OPT_CAPATH:    /* -CApath arg, CA证书路径 */
             CApath = opt_arg();
             break;
         case OPT_NOCAPATH:
@@ -1277,7 +1279,7 @@ int s_client_main(int argc, char **argv)
         case OPT_BUILD_CHAIN:
             build_chain = 1;
             break;
-        case OPT_CAFILE:
+        case OPT_CAFILE:    /* -CAfile arg, CA证书 */
             CAfile = opt_arg();
             break;
         case OPT_NOCAFILE:
@@ -1354,7 +1356,7 @@ int s_client_main(int argc, char **argv)
         case OPT_ASYNC:
             async = 1;
             break;
-        case OPT_SPLIT_SEND_FRAG:
+        case OPT_SPLIT_SEND_FRAG: /* 指定记录最大长度 */
             split_send_fragment = atoi(opt_arg());
             if (split_send_fragment == 0) {
                 /*
@@ -1364,7 +1366,7 @@ int s_client_main(int argc, char **argv)
                 split_send_fragment = SSL3_RT_MAX_PLAIN_LENGTH + 1;
             }
             break;
-        case OPT_MAX_PIPELINES:
+        case OPT_MAX_PIPELINES:   /* 最大加解密并行度 */
             max_pipelines = atoi(opt_arg());
             break;
         case OPT_READ_BUF:
@@ -1403,7 +1405,7 @@ int s_client_main(int argc, char **argv)
                        "%s: -proxy argument malformed or ambiguous\n", prog);
             goto end;
         }
-    } else {
+    } else {                  /* 获取服务器IP + PORT */
         int res = 1;
         char *tmp_host = host, *tmp_port = port;
         if (connectstr != NULL)
@@ -1452,13 +1454,13 @@ int s_client_main(int argc, char **argv)
 
     if (!app_passwd(passarg, NULL, &pass, NULL)) {
         BIO_printf(bio_err, "Error getting password\n");
-        goto end;
+        goto end;             /* 提取密码，如 -pass pass:xxx */
     }
 
-    if (key_file == NULL)
+    if (key_file == NULL)     /* ??? */
         key_file = cert_file;
 
-    if (key_file) {
+    if (key_file) {           /* 加载私钥 */
         key = load_key(key_file, key_format, 0, pass, e,
                        "client certificate private key file");
         if (key == NULL) {
@@ -1467,7 +1469,7 @@ int s_client_main(int argc, char **argv)
         }
     }
 
-    if (cert_file) {
+    if (cert_file) {          /* 加载公钥 */ 
         cert = load_cert(cert_file, cert_format, "client certificate file");
         if (cert == NULL) {
             ERR_print_errors(bio_err);
@@ -1511,7 +1513,7 @@ int s_client_main(int argc, char **argv)
         BIO_printf(bio_err, "%ld semi-random bytes loaded\n", randamt);
     }
 
-    if (bio_c_out == NULL) {
+    if (bio_c_out == NULL) {  /* 初始化输出，用于日志或调试 */
         if (c_quiet && !c_debug) {
             bio_c_out = BIO_new(BIO_s_null());
             if (c_msg && !bio_c_msg)
@@ -1526,6 +1528,7 @@ int s_client_main(int argc, char **argv)
     }
 #endif
 
+    /* 构建SSL环境 */
     ctx = SSL_CTX_new(meth);
     if (ctx == NULL) {
         ERR_print_errors(bio_err);
@@ -1535,6 +1538,7 @@ int s_client_main(int argc, char **argv)
     if (sdebug)
         ssl_ctx_security_debug(ctx, sdebug);
 
+    /* */
     if (ssl_config) {
         if (SSL_CTX_config(ctx, ssl_config) == 0) {
             BIO_printf(bio_err, "Error using configuration \"%s\"\n",
@@ -1544,6 +1548,7 @@ int s_client_main(int argc, char **argv)
         }
     }
 
+    /* 设定TLS版本号 */
     if (SSL_CTX_set_min_proto_version(ctx, min_version) == 0)
         goto end;
     if (SSL_CTX_set_max_proto_version(ctx, max_version) == 0)
@@ -1558,9 +1563,12 @@ int s_client_main(int argc, char **argv)
     if (async) {
         SSL_CTX_set_mode(ctx, SSL_MODE_ASYNC);
     }
+    
+    /* 设定传输记录大小 */
     if (split_send_fragment > 0) {
         SSL_CTX_set_split_send_fragment(ctx, split_send_fragment);
     }
+    
     if (max_pipelines > 0) {
         SSL_CTX_set_max_pipelines(ctx, max_pipelines);
     }
@@ -1717,7 +1725,7 @@ int s_client_main(int argc, char **argv)
      * In TLSv1.3 NewSessionTicket messages arrive after the handshake and can
      * come at any time. Therefore we use a callback to write out the session
      * when we know about it. This approach works for < TLSv1.3 as well.
-     */
+     *//* 是否缓存会话??? */
     if (sess_out) {
         SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_CLIENT
                                             | SSL_SESS_CACHE_NO_INTERNAL_STORE);
@@ -1727,6 +1735,7 @@ int s_client_main(int argc, char **argv)
     if (set_keylog_file(ctx, keylog_file))
         goto end;
 
+    /* 构建SSL对象 */
     con = SSL_new(ctx);
     if (sess_in) {
         SSL_SESSION *sess;
@@ -1788,6 +1797,7 @@ int s_client_main(int argc, char **argv)
     }
 
  re_start:
+    /* 解析域名，连接服务器 */
     if (init_client(&s, host, port, socket_family, socket_type) == 0) {
         BIO_printf(bio_err, "connect:errno=%d\n", get_last_socket_error());
         BIO_closesocket(s);
@@ -1795,7 +1805,7 @@ int s_client_main(int argc, char **argv)
     }
     BIO_printf(bio_c_out, "CONNECTED(%08X)\n", s);
 
-    if (c_nbio) {
+    if (c_nbio) {                       /* 设置非阻塞状态 */
         if (!BIO_socket_nbio(s, 1)) {
             ERR_print_errors(bio_err);
             goto end;
@@ -1852,8 +1862,8 @@ int s_client_main(int argc, char **argv)
             BIO_ctrl(sbio, BIO_CTRL_DGRAM_MTU_DISCOVER, 0, NULL);
     } else
 #endif /* OPENSSL_NO_DTLS */
-        sbio = BIO_new_socket(s, BIO_NOCLOSE);
-
+        sbio = BIO_new_socket(s, BIO_NOCLOSE); /* 生成对应socket的BIO */
+                                               /* 对应API, methods_sockp */
     if (nbio_test) {
         BIO *test;
 
@@ -1887,8 +1897,8 @@ int s_client_main(int argc, char **argv)
     }
 #endif
 
-    SSL_set_bio(con, sbio, sbio);
-    SSL_set_connect_state(con);
+    SSL_set_bio(con, sbio, sbio);              /* 将输入、输出BIO与SSL对象关联起来 */
+    SSL_set_connect_state(con);                /* 初始化客户端状态 */
 
     /* ok, lets connect */
     if (fileno_stdin() > SSL_get_fd(con))
@@ -1907,8 +1917,9 @@ int s_client_main(int argc, char **argv)
     sbuf_len = 0;
     sbuf_off = 0;
 
+    /* OPENSSL支持各种协议 */
     switch ((PROTOCOL_CHOICE) starttls_proto) {
-    case PROTO_OFF:
+    case PROTO_OFF:       /* 未选择，直接跳过 */
         break;
     case PROTO_LMTP:
     case PROTO_SMTP:
@@ -2394,6 +2405,7 @@ int s_client_main(int argc, char **argv)
         BIO_free(edfile);
     }
 
+    /* 主循环，接收报文处理，发送报文 */
     for (;;) {
         FD_ZERO(&readfds);
         FD_ZERO(&writefds);
@@ -2402,7 +2414,7 @@ int s_client_main(int argc, char **argv)
             DTLSv1_get_timeout(con, &timeout))
             timeoutp = &timeout;
         else
-            timeoutp = NULL;
+            timeoutp = NULL;      /* TCP链路无超时 */
 
         if (SSL_in_init(con) && !SSL_total_renegotiations(con)
                 && SSL_get_key_update_type(con) == SSL_KEY_UPDATE_NONE) {
@@ -2507,7 +2519,7 @@ int s_client_main(int argc, char **argv)
             }
 #else
             i = select(width, (void *)&readfds, (void *)&writefds,
-                       NULL, timeoutp);
+                       NULL, timeoutp);     /* 事件驱动的select */
 #endif
             if (i < 0) {
                 BIO_printf(bio_err, "bad select %d\n",
@@ -2521,6 +2533,7 @@ int s_client_main(int argc, char **argv)
             BIO_printf(bio_err, "TIMEOUT occurred\n");
         }
 
+        /* 向服务器发送数据, 由此触发握手协商 */
         if (!ssl_pending && FD_ISSET(SSL_get_fd(con), &writefds)) {
             k = SSL_write(con, &(cbuf[cbuf_off]), (unsigned int)cbuf_len);
             switch (SSL_get_error(con, k)) {
@@ -2611,17 +2624,18 @@ int s_client_main(int argc, char **argv)
                 read_ssl = 1;
                 write_tty = 0;
             }
+        /* 有读事件 */
         } else if (ssl_pending || FD_ISSET(SSL_get_fd(con), &readfds)) {
 #ifdef RENEG
             {
                 static int iiii;
-                if (++iiii == 52) {
+                if (++iiii == 52) {                        /* 重协商 */
                     SSL_renegotiate(con);
                     iiii = 0;
                 }
             }
 #endif
-            k = SSL_read(con, sbuf, 1024 /* BUFSIZZ */ );
+            k = SSL_read(con, sbuf, 1024 /* BUFSIZZ */ );  /* 读数据 */
 
             switch (SSL_get_error(con, k)) {
             case SSL_ERROR_NONE:
@@ -2678,6 +2692,7 @@ int s_client_main(int argc, char **argv)
 #if defined(OPENSSL_SYS_MSDOS)
         else if (has_stdin_waiting())
 #else
+        /* 读取标准输入 */
         else if (FD_ISSET(fileno_stdin(), &readfds))
 #endif
         {
@@ -2700,7 +2715,7 @@ int s_client_main(int argc, char **argv)
                 }
                 assert(lf_num == 0);
             } else
-                i = raw_read_stdin(cbuf, BUFSIZZ);
+                i = raw_read_stdin(cbuf, BUFSIZZ);  /* 从stdin读数据 */
 #if !defined(OPENSSL_SYS_WINDOWS) && !defined(OPENSSL_SYS_MSDOS)
             if (i == 0)
                 at_eof = 1;
@@ -2710,18 +2725,18 @@ int s_client_main(int argc, char **argv)
                 BIO_printf(bio_err, "DONE\n");
                 ret = 0;
                 goto shut;
-            }
+            }                                       /* Q表示退出 */
 
             if ((!c_ign_eof) && (cbuf[0] == 'R' && cmdletters)) {
                 BIO_printf(bio_err, "RENEGOTIATING\n");
-                SSL_renegotiate(con);
+                SSL_renegotiate(con);               /* R表示重新连接 */
                 cbuf_len = 0;
             }
 
             if (!c_ign_eof && (cbuf[0] == 'K' || cbuf[0] == 'k' )
-                    && cmdletters) {
+                    && cmdletters) {                
                 BIO_printf(bio_err, "KEYUPDATE\n");
-                SSL_key_update(con,
+                SSL_key_update(con,                 /* K表示更新key */
                                cbuf[0] == 'K' ? SSL_KEY_UPDATE_REQUESTED
                                               : SSL_KEY_UPDATE_NOT_REQUESTED);
                 cbuf_len = 0;
@@ -2729,7 +2744,7 @@ int s_client_main(int argc, char **argv)
 #ifndef OPENSSL_NO_HEARTBEATS
             else if ((!c_ign_eof) && (cbuf[0] == 'B' && cmdletters)) {
                 BIO_printf(bio_err, "HEARTBEATING\n");
-                SSL_heartbeat(con);
+                SSL_heartbeat(con);                 /* B表示心跳 */
                 cbuf_len = 0;
             }
 #endif

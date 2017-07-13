@@ -10,6 +10,99 @@
  - crypto                 :: 加解密算法库
  - ssl                    :: TLS协议库
 
+* PEM格式
+参考RFC1421-1424
+#+BEGIN_EXAMPLE
+Pre-Encapsulation Boundary (Pre-EB)
+  -----BEGIN PRIVACY-ENHANCED MESSAGE-----
+
+Encapsulated Header Portion
+  (Contains encryption control fields inserted in plaintext.
+  Examples include "DEK-Info:" and "Key-Info:".
+  Note that, although these control fields have line-oriented
+  representations similar to RFC 822 header fields, the set
+  of fields valid in this context is disjoint from those used
+  in RFC 822 processing.)
+
+Blank Line
+  (Separates Encapsulated Header from subsequent Encapsulated Text Portion)
+
+Encapsulated Text Portion
+  (Contains message data encoded as specified in Section 4.3.)
+
+Post-Encapsulation Boundary (Post-EB)
+  -----END PRIVACY-ENHANCED MESSAGE-----
+#+END_EXAMPLE
+
+封装头
+- Proc-Type      :: 指明此PEM消息采用的操作
+  : 必须为第一个封装头
+  : 值为两部分，利用逗号分隔
+  : 值第一部分用于封装头识别码，一般为4
+  : 值第二部分代表各种操作
+  :   ENCRYPTED
+  :   MIC-ONLY
+  :   MIC-CLEAR
+  :   CRL
+- DEK-Info       :: 指明加密算法及模式
+  : 值分两部分或一部分，利用逗号隔开
+  : 第一部分用于说明算法，及模式
+  : 第二部分可选，用于第一部分所需的参数等
+
+** 私钥
+#+BEGIN_EXAMPLE
+利用命令查看私钥cake.pem内容
+$ openssl rsa -in cakey.pem -noout -text
+包含内容项
+  modulus               128
+  publicExponent        3
+  privateExponent       128
+  prime1                64
+  prime2                64
+  exponent1             64
+  exponent2             64
+  coefficient           64
+
+真实的私钥文件，cake.pem
+-----BEGIN ENCRYPTED PRIVATE KEY-----
+MIIFDjBABgkqhkiG9w0BBQ0wMzAbBgkqhkiG9w0BBQwwDgQI0iaDwVuH4esCAggA
+MBQGCCqGSIb3DQMHBAhpuGqj05IhWgSCBMgL1p4u1LR3pGtnq4I3vdme1vARrNJ+
+kHfK5r4a1yXPRYkGcAJCcvidQqr5W2Qwyczx0bFt5vJIJEZbGUvKdZ5zs3k7fdKg
+EBf7xkPdRGFKGi76gXA8paztVcakYu9J/ZdOy32o7Q65D3udRhl/P+s077Vn6d8G
+6WQfoDIvfoHDnQ2fFuLDjIvn+XD5UFsnNGSdGzaItTzv24p2Fh7odo0aYggN+dZZ
+tcZfVyf7GjvyeOag6fm2cXbEUhaSTuCutbDOAYemtHgHrENYKAgm1CGPGqzL3hGR
+9Ct5NkUBr90tvyVXrjB46jp6VUHd6+9zwpFe7ib1CxnI3HElYJQp/CONt7GBJt9U
+nJaGbwD4+ryraXhtArNCwk0W3LaTNI+sKVqUyd43iwJectbuI3suCSA17N73imVt
+EmHmaRriSGoTsXGucNN/PxdIpVndlngiAtWcZqEsX3a6I8Vt3gBk7k/8f9EoxqLW
+IdYCR28GUITHbyqsc8y4fYIYUADezvKZAzvaNmaUJfBxdJWkthOXnK/Y6hwBFmZ9
+EkMMm0olnE73ZeR0iZjS6+izK6y88KgA2QkODWZERcg2XMjPZYW8JL0w3dfLP0pC
+BcMjS3RW1405JYeCnMCw770+08fCGtTOa7u1IULFz02gdzn6XRYcGyXT044LE1KC
+WxdKHPdb86V+TOr0fVDqHEjalalM2AmeBGBX32UFoJWKIl/2gudXupmOEjNL8+Wq
+LIa5RlnPY6r3FgSq0iCel5MAIbLnOdN0Rl187expgrzpmDPdlKkWFIRPldxUJ5rm
+L9URF+kzDYQw/rJD/UGF54lTOt92oRbn99pnBJZqFsI3onIMaoVPDVvG740L44l4
+xVJRTzmT8i2oqa7uZ7P2q8G15YnmaCJG3NosX/uOhbAVrX1GhS16fdUhVdrSd3gi
+vzjf7seHN7s0C1b8KkJfC7xqndmvhqv1HG6cjEP+qGT3bIqDeyoE1qAlEvo7CoKo
+6X1+dsVI4jvF2rGSVVrq7EyYGNjRJyGuYH9uBDp81C04yRvJD4nepq3BBBDUJ/nA
+IdMtAVQO7n01t5bj5V/ckmzA8K0n0mynpnYpgKvnE2uli7TIVT/s6ngjYD0yPrM6
+soJYrPCktkfZYrDrMIE9YLvaeSVuTOfFzMr5YWV/IaGgyTkJv/0JTIBZz18txihK
+dhyGVLaTx2PThgMTxzDk48qUAw1jZi67L9kRicLE38w1aAjnoGplkJiPT5B8EWUM
+0luU/GDqbxD765QnGsMs5z6jIMEz/9q9eBmslFdG5oi1oC/b35L51pzBVzMmrwtv
+DP1ClhABFEgRcETFK/pKuVyldlpZVRK/UDJOkU0pZT3L9TCpz6jn8OVKC+5cpsHL
+KqAZL85QdsrcFyOmJSOhjnUHYZhkvmj6k1+e2WpQBn3oQp67SH7ysZNZQBKlJOgL
+5xAHu6qHF8M8dHWB+K/Wp+zMfLCYiQ83lQLt4DvcSyH0aPv+/so8PS4wBwV7dBBE
+ly+oh6IvUlOyhlu56l2FmE4cnVyaxTf5cJJKmFNOSg8TRVM3DqmWBHKMPegPddys
+wuhSh8TMHAsgXql4Ba3AoDXVbPbzHBo8N4CfgmSxoplnj6/crn5g1ofLAtzokq8E
+3kw=
+-----END ENCRYPTED PRIVATE KEY-----
+#+END_EXAMPLE
+
+** 公钥
+#+BEGIN_EXAMPLE
+#+END_EXAMPLE
+
+* X509格式
+ab
+
 * SSL_do_handshake()
 定义文件：~/ssl/ssl_lib.c
 作用： 握手协商入口
@@ -34,6 +127,9 @@
     : 协议架构上提出扩展，使之支持UDP，即成为TLS的支持数据报传输的版本
     :
     : DTLS 1.0 基于 TLS 1.1, DTLS 1.2 基于TLS 1.2
+ - PEM, privacy-enhanced mail
+    : a de facto file format for storing and sending cryptography keys, 
+    : certificates, and other data
 
 * 参考
  - <<SSL & TLS>>

@@ -252,6 +252,7 @@ const UI_METHOD *get_ui_method(void)
 }
 #endif
 
+/* 加载私钥过程中，私钥文件加密的需要调用此函数，以获取解密密码 */
 int password_callback(char *buf, int bufsiz, int verify, PW_CB_DATA *cb_tmp)
 {
     int res = 0;
@@ -337,7 +338,7 @@ int app_passwd(const char *arg1, const char *arg2, char **pass1, char **pass2)
     else
         same = 1;
     if (arg1) {
-        *pass1 = app_get_pass(arg1, same);
+        *pass1 = app_get_pass(arg1, same);  /* 提取密码 */
         if (!*pass1)
             return 0;
     } else if (pass1)
@@ -357,9 +358,9 @@ static char *app_get_pass(const char *arg, int keepbio)
     static BIO *pwdbio = NULL;
     int i;
 
-    if (strncmp(arg, "pass:", 5) == 0)
+    if (strncmp(arg, "pass:", 5) == 0)      /* 格式-pass pass:... */
         return OPENSSL_strdup(arg + 5);
-    if (strncmp(arg, "env:", 4) == 0) {
+    if (strncmp(arg, "env:", 4) == 0) {     /* 格式-pass env:... */
         tmp = getenv(arg + 4);
         if (!tmp) {
             BIO_printf(bio_err, "Can't read environment variable %s\n", arg + 4);
@@ -367,7 +368,7 @@ static char *app_get_pass(const char *arg, int keepbio)
         }
         return OPENSSL_strdup(tmp);
     }
-    if (!keepbio || !pwdbio) {
+    if (!keepbio || !pwdbio) {              /* 格式-pass env:... */
         if (strncmp(arg, "file:", 5) == 0) {
             pwdbio = BIO_new_file(arg + 5, "r");
             if (!pwdbio) {
@@ -384,7 +385,7 @@ static char *app_get_pass(const char *arg, int keepbio)
              * with CreateFile.
              */
         } else if (strncmp(arg, "fd:", 3) == 0) {
-            BIO *btmp;
+            BIO *btmp;                      /* 格式-pass fd:... */
             i = atoi(arg + 3);
             if (i >= 0)
                 pwdbio = BIO_new_fd(i, BIO_NOCLOSE);
@@ -399,7 +400,7 @@ static char *app_get_pass(const char *arg, int keepbio)
             pwdbio = BIO_push(btmp, pwdbio);
 #endif
         } else if (strcmp(arg, "stdin") == 0) {
-            pwdbio = dup_bio_in(FORMAT_TEXT);
+            pwdbio = dup_bio_in(FORMAT_TEXT);/* 格式-pass stdin:... */
             if (!pwdbio) {
                 BIO_printf(bio_err, "Can't open BIO for stdin\n");
                 return NULL;
@@ -605,6 +606,7 @@ static int load_cert_crl_http(const char *url, X509 **pcert, X509_CRL **pcrl)
 }
 #endif
 
+/* 加载公钥 */
 X509 *load_cert(const char *file, int format, const char *cert_descrip)
 {
     X509 *x = NULL;
@@ -627,7 +629,7 @@ X509 *load_cert(const char *file, int format, const char *cert_descrip)
 
     if (format == FORMAT_ASN1)
         x = d2i_X509_bio(cert, NULL);
-    else if (format == FORMAT_PEM)
+    else if (format == FORMAT_PEM)         /* PEM格式的公钥证书 */
         x = PEM_read_bio_X509_AUX(cert, NULL,
                                   (pem_password_cb *)password_callback, NULL);
     else if (format == FORMAT_PKCS12) {
@@ -680,6 +682,7 @@ X509_CRL *load_crl(const char *infile, int format)
     return (x);
 }
 
+/* 通过文件加载私钥 */
 EVP_PKEY *load_key(const char *file, int format, int maybe_stdin,
                    const char *pass, ENGINE *e, const char *key_descrip)
 {
@@ -687,13 +690,15 @@ EVP_PKEY *load_key(const char *file, int format, int maybe_stdin,
     EVP_PKEY *pkey = NULL;
     PW_CB_DATA cb_data;
 
-    cb_data.password = pass;
+    cb_data.password = pass;     /* 私钥文件的解密密码 */
     cb_data.prompt_info = file;
 
     if (file == NULL && (!maybe_stdin || format == FORMAT_ENGINE)) {
         BIO_printf(bio_err, "no keyfile specified\n");
         goto end;
     }
+    
+    /* 硬件引擎 */
     if (format == FORMAT_ENGINE) {
         if (e == NULL)
             BIO_printf(bio_err, "no engine specified\n");
@@ -713,21 +718,23 @@ EVP_PKEY *load_key(const char *file, int format, int maybe_stdin,
         }
         goto end;
     }
+    
+    /* 非硬件引擎 */
     if (file == NULL && maybe_stdin) {
-        unbuffer(stdin);
+        unbuffer(stdin);          /* 终端手工输入 */
         key = dup_bio_in(format);
-    } else
+    } else                        /* 文件导入 */
         key = bio_open_default(file, 'r', format);
     if (key == NULL)
         goto end;
-    if (format == FORMAT_ASN1) {
+    if (format == FORMAT_ASN1) {        /* DER二进制格式 */
         pkey = d2i_PrivateKey_bio(key, NULL);
-    } else if (format == FORMAT_PEM) {
+    } else if (format == FORMAT_PEM) {  /* PEM格式 */
         pkey = PEM_read_bio_PrivateKey(key, NULL,
                                        (pem_password_cb *)password_callback,
                                        &cb_data);
     }
-    else if (format == FORMAT_PKCS12) {
+    else if (format == FORMAT_PKCS12) { /* */
         if (!load_pkcs12(key, key_descrip,
                          (pem_password_cb *)password_callback, &cb_data,
                          &pkey, NULL, NULL))

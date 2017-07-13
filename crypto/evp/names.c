@@ -21,6 +21,7 @@ int EVP_add_cipher(const EVP_CIPHER *c)
     if (c == NULL)
         return 0;
 
+    /* 加入names_lh哈希表，分别用short name、long name */
     r = OBJ_NAME_add(OBJ_nid2sn(c->nid), OBJ_NAME_TYPE_CIPHER_METH,
                      (const char *)c);
     if (r == 0)
@@ -55,6 +56,7 @@ int EVP_add_digest(const EVP_MD *md)
     return (r);
 }
 
+/* 解析PEM文件的封装头DEK-Info的第一个属性，获取加密算法 */
 const EVP_CIPHER *EVP_get_cipherbyname(const char *name)
 {
     const EVP_CIPHER *cp;
