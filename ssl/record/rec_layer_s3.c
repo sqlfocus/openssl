@@ -34,9 +34,10 @@ void RECORD_LAYER_init(RECORD_LAYER *rl, SSL *s)
     SSL3_RECORD_clear(rl->rrec, SSL_MAX_PIPELINES);
 }
 
+/* 清理记录信息 */
 void RECORD_LAYER_clear(RECORD_LAYER *rl)
 {
-    rl->rstate = SSL_ST_READ_HEADER;
+    rl->rstate = SSL_ST_READ_HEADER;        /* 等待接收新记录 */
 
     /*
      * Do I need to clear read_ahead? As far as I can tell read_ahead did not
@@ -61,7 +62,7 @@ void RECORD_LAYER_clear(RECORD_LAYER *rl)
     rl->numrpipes = 0;
     SSL3_RECORD_clear(rl->rrec, SSL_MAX_PIPELINES);
 
-    RECORD_LAYER_reset_read_sequence(rl);
+    RECORD_LAYER_reset_read_sequence(rl);   /* 清空记录序号 */
     RECORD_LAYER_reset_write_sequence(rl);
 
     if (rl->d)

@@ -249,6 +249,7 @@ int BIO_accept_ex(int accept_sock, BIO_ADDR *addr_, int options)
         return INVALID_SOCKET;
     }
 
+    /* 设置非阻塞 */
     if (!BIO_socket_nbio(accepted_sock, (options & BIO_SOCK_NONBLOCK) != 0)) {
         closesocket(accepted_sock);
         return INVALID_SOCKET;

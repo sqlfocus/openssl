@@ -930,6 +930,7 @@ const OPTIONS s_server_options[] = {
  (o == OPT_SSL3 || o == OPT_TLS1 || o == OPT_TLS1_1 || o == OPT_TLS1_2 \
   || o == OPT_TLS1_3 || o == OPT_DTLS || o == OPT_DTLS1 || o == OPT_DTLS1_2)
 
+/* openssl s_server子命令入口 */
 int s_server_main(int argc, char *argv[])
 {
     ENGINE *engine = NULL;
@@ -1015,6 +1016,7 @@ int s_server_main(int argc, char *argv[])
     s_brief = 0;
     async = 0;
 
+    /* 创建新配置环境 */
     cctx = SSL_CONF_CTX_new();
     vpm = X509_VERIFY_PARAM_new();
     if (cctx == NULL || vpm == NULL)
@@ -1022,6 +1024,7 @@ int s_server_main(int argc, char *argv[])
     SSL_CONF_CTX_set_flags(cctx,
                            SSL_CONF_FLAG_SERVER | SSL_CONF_FLAG_CMDLINE);
 
+    /* 解析参数 */
     prog = opt_init(argc, argv, s_server_options);
     while ((o = opt_next()) != OPT_EOF) {
         if (IS_PROT_FLAG(o) && ++prot_opt > 1) {
@@ -1071,7 +1074,7 @@ int s_server_main(int argc, char *argv[])
                 goto end;
             }
             break;
-        case OPT_PORT:
+        case OPT_PORT:   /* -port, 指定端口 */
 #ifdef AF_UNIX
             if (socket_family == AF_UNIX) {
                 socket_family = AF_UNSPEC;
@@ -1086,7 +1089,7 @@ int s_server_main(int argc, char *argv[])
                 goto end;
             }
             break;
-        case OPT_ACCEPT:
+        case OPT_ACCEPT: /* -accept host:port, 指定监听的主机、端口 */
 #ifdef AF_UNIX
             if (socket_family == AF_UNIX) {
                 socket_family = AF_UNSPEC;
@@ -1133,7 +1136,7 @@ int s_server_main(int argc, char *argv[])
         case OPT_CONTEXT:
             context = (unsigned char *)opt_arg();
             break;
-        case OPT_CERT:
+        case OPT_CERT:      /* -cert infile, 本地证书 */
             s_cert_file = opt_arg();
             break;
         case OPT_NAMEOPT:
@@ -1153,7 +1156,7 @@ int s_server_main(int argc, char *argv[])
             if (!opt_format(opt_arg(), OPT_FMT_PEMDER, &s_cert_format))
                 goto opthelp;
             break;
-        case OPT_KEY:
+        case OPT_KEY:       /* -key infile, 本地私钥 */
             s_key_file = opt_arg();
             break;
         case OPT_KEYFORM:
@@ -1374,16 +1377,16 @@ int s_server_main(int argc, char *argv[])
                 min_version = TLS1_VERSION;
 #endif
             break;
-        case OPT_REV:
+        case OPT_REV:         /* -rev, 扮演简单的echo服务器角色 */
             rev = 1;
             break;
-        case OPT_WWW:
+        case OPT_WWW:         /* -www, 应答GET / */
             www = 1;
             break;
-        case OPT_UPPER_WWW:
+        case OPT_UPPER_WWW:   /* -WWW, 应答GET */
             www = 2;
             break;
-        case OPT_HTTP:
+        case OPT_HTTP:        /* -HTTP, 类似于-WWW */
             www = 3;
             break;
         case OPT_SSL_CONFIG:
@@ -1553,6 +1556,7 @@ int s_server_main(int argc, char *argv[])
         goto end;
     }
 
+    /* 提取密码 */
     if (!app_passwd(passarg, dpassarg, &pass, &dpass)) {
         BIO_printf(bio_err, "Error getting password\n");
         goto end;
@@ -1567,21 +1571,22 @@ int s_server_main(int argc, char *argv[])
     if (!load_excert(&exc))
         goto end;
 
+    /* 加载公钥证书和私钥文件 */
     if (nocert == 0) {
         s_key = load_key(s_key_file, s_key_format, 0, pass, engine,
                          "server certificate private key file");
-        if (!s_key) {
+        if (!s_key) {     /* 加载私钥 */
             ERR_print_errors(bio_err);
             goto end;
         }
 
         s_cert = load_cert(s_cert_file, s_cert_format,
                            "server certificate file");
-
-        if (!s_cert) {
+        if (!s_cert) {    /* 加载公钥证书 */
             ERR_print_errors(bio_err);
             goto end;
         }
+        
         if (s_chain_file) {
             if (!load_certs(s_chain_file, &s_chain, FORMAT_PEM, NULL,
                             "server certificate chain"))
@@ -1694,6 +1699,7 @@ int s_server_main(int argc, char *argv[])
         s_key_file2 = NULL;
     }
 
+    /* 构建SSL环境 */
     ctx = SSL_CTX_new(meth);
     if (ctx == NULL) {
         ERR_print_errors(bio_err);
@@ -1701,6 +1707,7 @@ int s_server_main(int argc, char *argv[])
     }
     if (sdebug)
         ssl_ctx_security_debug(ctx, sdebug);
+    
     if (ssl_config) {
         if (SSL_CTX_config(ctx, ssl_config) == 0) {
             BIO_printf(bio_err, "Error using configuration \"%s\"\n",
@@ -1709,6 +1716,8 @@ int s_server_main(int argc, char *argv[])
             goto end;
         }
     }
+
+    /* 设置版本号 */
     if (SSL_CTX_set_min_proto_version(ctx, min_version) == 0)
         goto end;
     if (SSL_CTX_set_max_proto_version(ctx, max_version) == 0)
@@ -1849,7 +1858,7 @@ int s_server_main(int argc, char *argv[])
         SSL_CTX_set_alpn_select_cb(ctx, alpn_cb, &alpn_ctx);
 
 #ifndef OPENSSL_NO_DH
-    if (!no_dhe) {
+    if (!no_dhe) {               /* 可用通过参数 -no_dhe 屏蔽DH磋商算法 */
         DH *dh = NULL;
 
         if (dhfile)
@@ -1897,6 +1906,7 @@ int s_server_main(int argc, char *argv[])
     }
 #endif
 
+    /* 利用加载的证书、私钥初始化SSL环境 */
     if (!set_cert_key_stuff(ctx, s_cert, s_key, s_chain, build_chain))
         goto end;
 
@@ -1936,6 +1946,7 @@ int s_server_main(int argc, char *argv[])
     }
 #endif
 
+    /* 设置客户端认证 */
     SSL_CTX_set_verify(ctx, s_server_verify, verify_callback);
     if (!SSL_CTX_set_session_id_context(ctx,
                                         (void *)&s_server_session_id_context,
@@ -2005,19 +2016,21 @@ int s_server_main(int argc, char *argv[])
     if (max_early_data >= 0)
         SSL_CTX_set_max_early_data(ctx, max_early_data);
 
+    /* 设置处理回调 */
     BIO_printf(bio_s_out, "ACCEPT\n");
     (void)BIO_flush(bio_s_out);
-    if (rev)
+    if (rev)         /* 简单的echo服务器 */
         server_cb = rev_body;
-    else if (www)
+    else if (www)    /* 处理HTTP */
         server_cb = www_body;
-    else
+    else             /* 默认 */
         server_cb = sv_body;
 #ifdef AF_UNIX
     if (socket_family == AF_UNIX
         && unlink_unix_path)
         unlink(host);
 #endif
+    /* 主处理循环 */
     do_server(&accept_socket, host, port, socket_family, socket_type,
               server_cb, context, naccept);
     print_stats(bio_s_out, ctx);
@@ -2090,6 +2103,10 @@ static void print_stats(BIO *bio, SSL_CTX *ssl_ctx)
                SSL_CTX_sess_get_cache_size(ssl_ctx));
 }
 
+/* 默认的服务处理回调
+   @param s: 新链接插口结构
+   @param stype: SOCK_STREAM
+   @param context: 默认NULL */
 static int sv_body(int s, int stype, unsigned char *context)
 {
     char *buf = NULL;
@@ -2106,23 +2123,25 @@ static int sv_body(int s, int stype, unsigned char *context)
     struct timeval *timeoutp;
 #endif
 
+    /* 分配接收缓存 */
     buf = app_malloc(bufsize, "server buffer");
-    if (s_nbio) {
+    if (s_nbio) {       /* 如必要设置非阻塞 */
         if (!BIO_socket_nbio(s, 1))
             ERR_print_errors(bio_err);
         else if (!s_quiet)
             BIO_printf(bio_err, "Turned on non blocking io\n");
     }
 
+    /* 创建SSL通道，并协商 */
     if (con == NULL) {
-        con = SSL_new(ctx);
+        con = SSL_new(ctx);         /* 创建SSL对象 */
 
         if (s_tlsextdebug) {
             SSL_set_tlsext_debug_callback(con, tlsext_cb);
             SSL_set_tlsext_debug_arg(con, bio_s_out);
         }
 
-        if (context
+        if (context                 /* 设定会话信息 */
             && !SSL_set_session_id_context(con,
                                            context, strlen((char *)context))) {
             BIO_printf(bio_err, "Error setting session id context\n");
@@ -2130,7 +2149,7 @@ static int sv_body(int s, int stype, unsigned char *context)
             goto err;
         }
     }
-    if (!SSL_clear(con)) {
+    if (!SSL_clear(con)) {          /* 初始化SSL对象 */
         BIO_printf(bio_err, "Error clearing SSL connection\n");
         ret = -1;
         goto err;
@@ -2172,7 +2191,7 @@ static int sv_body(int s, int stype, unsigned char *context)
         /* turn on cookie exchange */
         SSL_set_options(con, SSL_OP_COOKIE_EXCHANGE);
     } else
-#endif
+#endif                              /* 构建插口对应的BIO, methods_sockp */
         sbio = BIO_new_socket(s, BIO_NOCLOSE);
 
     if (s_nbio_test) {
@@ -2182,8 +2201,8 @@ static int sv_body(int s, int stype, unsigned char *context)
         sbio = BIO_push(test, sbio);
     }
 
-    SSL_set_bio(con, sbio, sbio);
-    SSL_set_accept_state(con);
+    SSL_set_bio(con, sbio, sbio);   /* 关联到SSL对象 */
+    SSL_set_accept_state(con);      /* 设置服务器角色 */
     /* SSL_set_fd(con,s); */
 
     if (s_debug) {
@@ -2244,6 +2263,7 @@ static int sv_body(int s, int stype, unsigned char *context)
             print_connection_info(con);
     }
 
+    /* 交互主循环 */
     if (fileno_stdin() > s)
         width = fileno_stdin() + 1;
     else
@@ -2256,6 +2276,7 @@ static int sv_body(int s, int stype, unsigned char *context)
         read_from_sslcon = SSL_has_pending(con)
                            || (async && SSL_waiting_for_async(con));
 
+        /* 监听stdin/客户端SSL */
         if (!read_from_sslcon) {
             FD_ZERO(&readfds);
 #if !defined(OPENSSL_SYS_WINDOWS) && !defined(OPENSSL_SYS_MSDOS)
@@ -2305,8 +2326,10 @@ static int sv_body(int s, int stype, unsigned char *context)
             if (FD_ISSET(s, &readfds))
                 read_from_sslcon = 1;
         }
+        
+        /* stdin有数据 */
         if (read_from_terminal) {
-            if (s_crlf) {
+            if (s_crlf) {                    /* 读数据 */
                 int j, lf_num;
 
                 i = raw_read_stdin(buf, bufsize / 2);
@@ -2327,7 +2350,7 @@ static int sv_body(int s, int stype, unsigned char *context)
             } else
                 i = raw_read_stdin(buf, bufsize);
 
-            if (!s_quiet && !s_brief) {
+            if (!s_quiet && !s_brief) {      /* Q/q/B/回车 处理 */
                 if ((i <= 0) || (buf[0] == 'Q')) {
                     BIO_printf(bio_s_out, "DONE\n");
                     (void)BIO_flush(bio_s_out);
@@ -2412,7 +2435,7 @@ static int sv_body(int s, int stype, unsigned char *context)
                     count = 0;
                     SSL_renegotiate(con);
                 }
-#endif
+#endif          /* 回显到客户端 */
                 k = SSL_write(con, &(buf[l]), (unsigned int)i);
 #ifndef OPENSSL_NO_SRP
                 while (SSL_get_error(con, k) == SSL_ERROR_WANT_X509_LOOKUP) {
@@ -2469,6 +2492,7 @@ static int sv_body(int s, int stype, unsigned char *context)
                     break;
             }
         }
+        /* SSL客户端有数据 */
         if (read_from_sslcon) {
             /*
              * init_ssl_connection handles all async events itself so if we're
@@ -2477,7 +2501,7 @@ static int sv_body(int s, int stype, unsigned char *context)
              */
             if ((!async || !SSL_waiting_for_async(con))
                     && !SSL_is_init_finished(con)) {
-                i = init_ssl_connection(con);
+                i = init_ssl_connection(con);  /* SSL协商 */
 
                 if (i < 0) {
                     ret = 0;
@@ -2487,9 +2511,9 @@ static int sv_body(int s, int stype, unsigned char *context)
                     goto err;
                 }
             } else {
- again:
+ again:                                        
                 i = SSL_read(con, (char *)buf, bufsize);
-#ifndef OPENSSL_NO_SRP
+#ifndef OPENSSL_NO_SRP                         /* 读数据 */
                 while (SSL_get_error(con, i) == SSL_ERROR_WANT_X509_LOOKUP) {
                     BIO_printf(bio_s_out, "LOOKUP renego during read\n");
                     SRP_user_pwd_free(srp_callback_parm.user);
@@ -2505,13 +2529,13 @@ static int sv_body(int s, int stype, unsigned char *context)
                 }
 #endif
                 switch (SSL_get_error(con, i)) {
-                case SSL_ERROR_NONE:
+                case SSL_ERROR_NONE:           /* 无差错，输出到终端 */
 #ifdef CHARSET_EBCDIC
                     ascii2ebcdic(buf, buf, i);
 #endif
                     raw_write_stdout(buf, (unsigned int)i);
                     (void)BIO_flush(bio_s_out);
-                    if (SSL_has_pending(con))
+                    if (SSL_has_pending(con))  /* 未读完，继续 */
                         goto again;
                     break;
                 case SSL_ERROR_WANT_ASYNC:
@@ -2545,6 +2569,7 @@ static int sv_body(int s, int stype, unsigned char *context)
         }
     }
  err:
+    /* 善后处理 */
     if (con != NULL) {
         BIO_printf(bio_s_out, "shutting down SSL\n");
         SSL_set_shutdown(con, SSL_SENT_SHUTDOWN | SSL_RECEIVED_SHUTDOWN);
@@ -2566,6 +2591,7 @@ static void close_accept_socket(void)
     }
 }
 
+/* SSL握手协商 */
 static int init_ssl_connection(SSL *con)
 {
     int i;
@@ -2573,7 +2599,7 @@ static int init_ssl_connection(SSL *con)
     int retry = 0;
 
 #ifndef OPENSSL_NO_DTLS
-    if (dtlslisten) {
+    if (dtlslisten) {           /* UDP类型 */
         BIO_ADDR *client = NULL;
 
         if ((client = BIO_ADDR_new()) == NULL) {
@@ -2604,8 +2630,8 @@ static int init_ssl_connection(SSL *con)
     } else
 #endif
 
-    do {
-        i = SSL_accept(con);
+    do {                    
+        i = SSL_accept(con);    /* TCP类型 */
 
         if (i <= 0)
             retry = BIO_sock_should_retry(i);
@@ -2663,7 +2689,7 @@ static int init_ssl_connection(SSL *con)
         return (0);
     }
 
-    print_connection_info(con);
+    print_connection_info(con);   /* 打印链路信息 */
     return 1;
 }
 
@@ -3151,6 +3177,7 @@ static int www_body(int s, int stype, unsigned char *context)
     return (ret);
 }
 
+/* 模拟ECHO类型服务器 */
 static int rev_body(int s, int stype, unsigned char *context)
 {
     char *buf = NULL;

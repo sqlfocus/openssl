@@ -1213,7 +1213,7 @@ DECLARE_PEM_rw(SSL_SESSION, SSL_SESSION)
         SSL_CTX_ctrl(ctx,SSL_CTRL_GET_CHAIN_CERTS,0,px509)
 # define SSL_CTX_clear_chain_certs(ctx) \
         SSL_CTX_set0_chain(ctx,NULL)
-# define SSL_CTX_build_cert_chain(ctx, flags) \
+EVP_PKEY_RSA# define SSL_CTX_build_cert_chain(ctx, flags) \
         SSL_CTX_ctrl(ctx,SSL_CTRL_BUILD_CERT_CHAIN, flags, NULL)
 # define SSL_CTX_select_current_cert(ctx,x509) \
         SSL_CTX_ctrl(ctx,SSL_CTRL_SELECT_CURRENT_CERT,0,(char *)x509)

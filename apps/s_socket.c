@@ -128,7 +128,7 @@ int init_client(int *sock, const char *host, const char *port,
  * incoming connections and run cb on the resulting socket.
  *
  * 0 on failure, something other on success.
- */
+ *//* 服务器主处理循环封装函数 */
 int do_server(int *accept_sock, const char *host, const char *port,
               int family, int type, do_server_cb cb,
               unsigned char *context, int naccept)
@@ -142,6 +142,7 @@ int do_server(int *accept_sock, const char *host, const char *port,
     if (!BIO_sock_init())
         return 0;
 
+    /* 域名解析 */
     if (!BIO_lookup(host, port, BIO_LOOKUP_SERVER, family, type, &res)) {
         ERR_print_errors(bio_err);
         return 0;
@@ -152,6 +153,7 @@ int do_server(int *accept_sock, const char *host, const char *port,
     OPENSSL_assert((family == AF_UNSPEC || family == BIO_ADDRINFO_family(res))
                    && (type == 0 || type == BIO_ADDRINFO_socktype(res)));
 
+    /* 建立插口 */
     asock = BIO_socket(BIO_ADDRINFO_family(res), BIO_ADDRINFO_socktype(res),
                        BIO_ADDRINFO_protocol(res), 0);
     if (asock == INVALID_SOCKET
@@ -166,21 +168,22 @@ int do_server(int *accept_sock, const char *host, const char *port,
     BIO_ADDRINFO_free(res);
     res = NULL;
 
+    /* 监听插口 */
     if (accept_sock != NULL)
         *accept_sock = asock;
     for (;;) {
-        if (type == SOCK_STREAM) {
+        if (type == SOCK_STREAM) {       /* TCP链路 */
             do {
                 sock = BIO_accept_ex(asock, NULL, 0);
             } while (sock < 0 && BIO_sock_should_retry(ret));
-            if (sock < 0) {
+            if (sock < 0) {                    /* accept() */
                 ERR_print_errors(bio_err);
                 BIO_closesocket(asock);
                 break;
             }
-            i = (*cb)(sock, type, context);
+            i = (*cb)(sock, type, context);    /* 调用回调, sv_body/rev_body/www_body() */
             BIO_closesocket(sock);
-        } else {
+        } else {                         /* UDP等其他链路 */
             i = (*cb)(asock, type, context);
         }
 

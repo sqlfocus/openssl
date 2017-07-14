@@ -147,18 +147,20 @@ int set_cert_stuff(SSL_CTX *ctx, char *cert_file, char *key_file)
     return (1);
 }
 
+/* 加载证书、私钥到SSL环境 */
 int set_cert_key_stuff(SSL_CTX *ctx, X509 *cert, EVP_PKEY *key,
                        STACK_OF(X509) *chain, int build_chain)
 {
     int chflags = chain ? SSL_BUILD_CHAIN_FLAG_CHECK : 0;
     if (cert == NULL)
         return 1;
+    /* 使用此公钥 */
     if (SSL_CTX_use_certificate(ctx, cert) <= 0) {
         BIO_printf(bio_err, "error setting certificate\n");
         ERR_print_errors(bio_err);
         return 0;
     }
-
+    /* 使用此私钥 */
     if (SSL_CTX_use_PrivateKey(ctx, key) <= 0) {
         BIO_printf(bio_err, "error setting private key\n");
         ERR_print_errors(bio_err);

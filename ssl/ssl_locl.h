@@ -804,7 +804,7 @@ struct ssl_ctx_st {
     int max_proto_version;
     size_t max_cert_list;
 
-    struct cert_st /* CERT */ *cert;
+    struct cert_st /* CERT */ *cert;    /* 此SSL环境的密钥信息 */
     int read_ahead;
 
     /* callback that allows applications to peek at protocol messages */
@@ -983,7 +983,7 @@ struct ssl_st {
     /*
      * There are 2 BIO's even though they are normally both the same.  This
      * is so data can be read and written to different handlers
-     */
+     */                                    /* 底层FD */
     BIO *rbio;    /* used by SSL_read() */
     BIO *wbio;    /* used by SSL_write() */
     BIO *bbio;    /* used during session-id reuse to concatenate messages */
@@ -1013,9 +1013,9 @@ struct ssl_st {
     /* don't send shutdown packets */
     int quiet_shutdown;
     /* we have shut things down, 0x01 sent, 0x02 for received */
-    int shutdown;
+    int shutdown;                          /* 链路状态, SSL_SENT_SHUTDOWN */
     /* where we are */
-    OSSL_STATEM statem;
+    OSSL_STATEM statem;                    /* SSL协商状态机信息 */
     SSL_EARLY_DATA_STATE early_data_state;
     BUF_MEM *init_buf;          /* buffer used during init */
     void *init_msg;             /* pointer to handshake message body, set by
@@ -1264,7 +1264,7 @@ struct ssl_st {
      * basis, depending on the chosen cipher.
      */
     int (*not_resumable_session_cb) (SSL *ssl, int is_forward_secure);
-    RECORD_LAYER rlayer;
+    RECORD_LAYER rlayer;            /* 跟踪记录信息 */
     /* Default password callback. */
     pem_password_cb *default_passwd_callback;
     /* Default password callback user data. */
@@ -1588,9 +1588,10 @@ typedef struct dtls1_state_st {
 #  define NAMED_CURVE_TYPE           3
 # endif                         /* OPENSSL_NO_EC */
 
+/* 支持的非对称密钥信息 */
 struct cert_pkey_st {
-    X509 *x509;
-    EVP_PKEY *privatekey;
+    X509 *x509;            /* 公钥 */
+    EVP_PKEY *privatekey;  /* 私钥 */
     /* Chain for this certificate */
     STACK_OF(X509) *chain;
     /*-
@@ -1648,7 +1649,7 @@ typedef struct cert_st {
      * Probably it would make more sense to store
      * an index, not a pointer.
      */
-    CERT_PKEY *key;
+    CERT_PKEY *key;                /* 当前生效的密钥, &->pkeys[xxx] */
 # ifndef OPENSSL_NO_DH
     EVP_PKEY *dh_tmp;
     DH *(*dh_tmp_cb) (SSL *ssl, int is_export, int keysize);
@@ -1656,7 +1657,7 @@ typedef struct cert_st {
 # endif
     /* Flags related to certificates */
     uint32_t cert_flags;
-    CERT_PKEY pkeys[SSL_PKEY_NUM];
+    CERT_PKEY pkeys[SSL_PKEY_NUM]; /* 支持的密钥信息 */
     /* Custom certificate types sent in certificate request message. */
     uint8_t *ctype;
     size_t ctype_len;

@@ -121,7 +121,7 @@ int SSL_use_RSAPrivateKey(SSL *ssl, RSA *rsa)
 static int ssl_set_pkey(CERT *c, EVP_PKEY *pkey)
 {
     int i;
-    i = ssl_cert_type(NULL, pkey);
+    i = ssl_cert_type(NULL, pkey);     /* 获取私钥类型 */
     if (i < 0) {
         SSLerr(SSL_F_SSL_SET_PKEY, SSL_R_UNKNOWN_CERTIFICATE_TYPE);
         return (0);
@@ -159,8 +159,8 @@ static int ssl_set_pkey(CERT *c, EVP_PKEY *pkey)
 
     EVP_PKEY_free(c->pkeys[i].privatekey);
     EVP_PKEY_up_ref(pkey);
-    c->pkeys[i].privatekey = pkey;
-    c->key = &(c->pkeys[i]);
+    c->pkeys[i].privatekey = pkey;     /* 保存私钥 */
+    c->key = &(c->pkeys[i]);           /* 激活当前密钥信息 */
     return (1);
 }
 
@@ -291,6 +291,7 @@ int SSL_use_PrivateKey_ASN1(int type, SSL *ssl, const unsigned char *d,
     return (ret);
 }
 
+/* 应用当前公钥证书 */
 int SSL_CTX_use_certificate(SSL_CTX *ctx, X509 *x)
 {
     int rv;
@@ -303,7 +304,7 @@ int SSL_CTX_use_certificate(SSL_CTX *ctx, X509 *x)
         SSLerr(SSL_F_SSL_CTX_USE_CERTIFICATE, rv);
         return 0;
     }
-    return (ssl_set_cert(ctx->cert, x));
+    return (ssl_set_cert(ctx->cert, x));  /* 保存到SSL环境 */
 }
 
 static int ssl_set_cert(CERT *c, X509 *x)
@@ -361,8 +362,8 @@ static int ssl_set_cert(CERT *c, X509 *x)
 
     X509_free(c->pkeys[i].x509);
     X509_up_ref(x);
-    c->pkeys[i].x509 = x;
-    c->key = &(c->pkeys[i]);
+    c->pkeys[i].x509 = x;          /* 存储信息 */
+    c->key = &(c->pkeys[i]);       /* 激活当前密钥信息 */
 
     return 1;
 }
@@ -516,13 +517,14 @@ int SSL_CTX_use_RSAPrivateKey_ASN1(SSL_CTX *ctx, const unsigned char *d,
 }
 #endif                          /* !OPENSSL_NO_RSA */
 
+/* 应用私钥 */
 int SSL_CTX_use_PrivateKey(SSL_CTX *ctx, EVP_PKEY *pkey)
 {
     if (pkey == NULL) {
         SSLerr(SSL_F_SSL_CTX_USE_PRIVATEKEY, ERR_R_PASSED_NULL_PARAMETER);
         return (0);
     }
-    return (ssl_set_pkey(ctx->cert, pkey));
+    return (ssl_set_pkey(ctx->cert, pkey));  /* 配置私钥到当前SSL环境 */
 }
 
 int SSL_CTX_use_PrivateKey_file(SSL_CTX *ctx, const char *file, int type)

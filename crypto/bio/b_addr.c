@@ -626,7 +626,7 @@ DEFINE_RUN_ONCE_STATIC(do_bio_lookup_init)
  * When no longer needed you should call BIO_ADDRINFO_free() to free the result.
  *
  * The return value is 1 on success or 0 in case of error.
- */
+ *//* 域名解析 */
 int BIO_lookup(const char *host, const char *service,
                enum BIO_lookup_type lookup_type,
                int family, int socktype, BIO_ADDRINFO **res)

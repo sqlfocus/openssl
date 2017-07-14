@@ -131,7 +131,7 @@ typedef struct dtls_record_layer_st {
  * this structure.                                                           *
  *                                                                           *
  *****************************************************************************/
-
+/* 维持SSL对象的记录 */
 typedef struct record_layer_st {
     /* The parent SSL structure */
     SSL *s;
@@ -141,7 +141,7 @@ typedef struct record_layer_st {
      */
     int read_ahead;
     /* where we are when reading */
-    int rstate;
+    int rstate;             /* 如 SSL_ST_READ_HEADER */
     /* How many pipelines can be used to read data */
     size_t numrpipes;
     /* How many pipelines can be used to write data */
@@ -174,8 +174,8 @@ typedef struct record_layer_st {
     /* number of bytes submitted */
     size_t wpend_ret;
     const unsigned char *wpend_buf;
-    unsigned char read_sequence[SEQ_NUM_SIZE];
-    unsigned char write_sequence[SEQ_NUM_SIZE];
+    unsigned char read_sequence[SEQ_NUM_SIZE];     /* 读序号 */
+    unsigned char write_sequence[SEQ_NUM_SIZE];    /* 写序号 */
     /* Set to true if this is the first record in a connection */
     unsigned int is_first_record;
     /* Count of the number of consecutive warning alerts received */

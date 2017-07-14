@@ -439,6 +439,7 @@ static void clear_ciphers(SSL *s)
     ssl_clear_hash_ctx(&s->write_hash);
 }
 
+/* 初始化SSL对象 */
 int SSL_clear(SSL *s)
 {
     if (s->method == NULL) {
@@ -460,7 +461,7 @@ int SSL_clear(SSL *s)
         return 0;
     }
 
-    ossl_statem_clear(s);
+    ossl_statem_clear(s);               /* 初始化状态机 */
 
     s->version = s->method->version;
     s->client_version = s->version;
@@ -494,9 +495,9 @@ int SSL_clear(SSL *s)
         if (!s->method->ssl_new(s))
             return (0);
     } else
-        s->method->ssl_clear(s);
+        s->method->ssl_clear(s);        /* 初始化SSL对象, tls1_clear() */
 
-    RECORD_LAYER_clear(&s->rlayer);
+    RECORD_LAYER_clear(&s->rlayer);     /* 初始化记录信息 */
 
     return (1);
 }

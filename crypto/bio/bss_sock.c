@@ -168,6 +168,7 @@ static int sock_puts(BIO *bp, const char *str)
     return (ret);
 }
 
+/* 判断是否发生了验证的插口IO错误 */
 int BIO_sock_should_retry(int i)
 {
     int err;
