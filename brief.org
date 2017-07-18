@@ -103,6 +103,9 @@ wuhSh8TMHAsgXql4Ba3AoDXVbPbzHBo8N4CfgmSxoplnj6/crn5g1ofLAtzokq8E
 * X509格式
 ab
 
+* RSA算法原理
+[[file:RSA%E7%AE%97%E6%B3%95%E5%8E%9F%E7%90%86.pdf][file:RSA算法原理.pdf]]
+
 * openssl s_client
 模拟客户端, s_client_main() in ~/apps/s_client.c
 
