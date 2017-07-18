@@ -34,6 +34,7 @@ void SSL3_BUFFER_release(SSL3_BUFFER *b)
     b->buf = NULL;
 }
 
+/* 初始化TLS读取缓存 */
 int ssl3_setup_read_buffer(SSL *s)
 {
     unsigned char *p;
@@ -126,6 +127,7 @@ int ssl3_setup_write_buffer(SSL *s, size_t numwpipes, size_t len)
     return 0;
 }
 
+/* 构建SSL对象的记录读写缓存 */
 int ssl3_setup_buffers(SSL *s)
 {
     if (!ssl3_setup_read_buffer(s))

@@ -129,26 +129,26 @@ struct x509_cert_aux_st {
 };
 
 struct x509_cinf_st {
-    ASN1_INTEGER *version;      /* [ 0 ] default of v1 */
-    ASN1_INTEGER serialNumber;
-    X509_ALGOR signature;
-    X509_NAME *issuer;
-    X509_VAL validity;
-    X509_NAME *subject;
-    X509_PUBKEY *key;
-    ASN1_BIT_STRING *issuerUID; /* [ 1 ] optional in v2 */
-    ASN1_BIT_STRING *subjectUID; /* [ 2 ] optional in v2 */
-    STACK_OF(X509_EXTENSION) *extensions; /* [ 3 ] optional in v3 */
+    ASN1_INTEGER *version;      /* 版本，[ 0 ] default of v1 */
+    ASN1_INTEGER serialNumber;  /* 序列号 */
+    X509_ALGOR signature;       /* 签名算法 */
+    X509_NAME *issuer;          /* 颁发者 */
+    X509_VAL validity;          /* 有效时间 */
+    X509_NAME *subject;         /* 持有者 */
+    X509_PUBKEY *key;           /* 公钥 */
+    ASN1_BIT_STRING *issuerUID; /* 颁发者唯一标识，[ 1 ] optional in v2 */
+    ASN1_BIT_STRING *subjectUID; /* 持有者唯一标识，[ 2 ] optional in v2 */
+    STACK_OF(X509_EXTENSION) *extensions; /* 扩展项，[ 3 ] optional in v3 */
     ASN1_ENCODING enc;
 };
 
 /* X509证书信息结构 */
 struct x509_st {
-    X509_CINF cert_info;
-    X509_ALGOR sig_alg;
-    ASN1_BIT_STRING signature;
-    CRYPTO_REF_COUNT references;
-    CRYPTO_EX_DATA ex_data;
+    X509_CINF cert_info;        /* 证书主体信息 */
+    X509_ALGOR sig_alg;         /* 签名算法 */
+    ASN1_BIT_STRING signature;  /* 签名值 */
+    CRYPTO_REF_COUNT references;/* 引用计数 */
+    CRYPTO_EX_DATA ex_data;     /* 扩展数据结构，用于存放用户自定义信息 */
     /* These contain copies of various extension values */
     long ex_pathlen;
     long ex_pcpathlen;
@@ -156,8 +156,8 @@ struct x509_st {
     uint32_t ex_kusage;
     uint32_t ex_xkusage;
     uint32_t ex_nscert;
-    ASN1_OCTET_STRING *skid;
-    AUTHORITY_KEYID *akid;
+    ASN1_OCTET_STRING *skid;    /* 主体密钥标识 */
+    AUTHORITY_KEYID *akid;      /* 颁发者密钥标识 */
     X509_POLICY_CACHE *policy_cache;
     STACK_OF(DIST_POINT) *crldp;
     STACK_OF(GENERAL_NAME) *altname;
@@ -166,8 +166,8 @@ struct x509_st {
     STACK_OF(IPAddressFamily) *rfc3779_addr;
     struct ASIdentifiers_st *rfc3779_asid;
 # endif
-    unsigned char sha1_hash[SHA_DIGEST_LENGTH];
-    X509_CERT_AUX *aux;
+    unsigned char sha1_hash[SHA_DIGEST_LENGTH];  /* 存放证书的sha1摘要值 */
+    X509_CERT_AUX *aux;         /* 辅助信息 */
     CRYPTO_RWLOCK *lock;
 } /* X509 */ ;
 

@@ -103,22 +103,28 @@ wuhSh8TMHAsgXql4Ba3AoDXVbPbzHBo8N4CfgmSxoplnj6/crn5g1ofLAtzokq8E
 * X509格式
 ab
 
+* openssl s_client
+模拟客户端, s_client_main() in ~/apps/s_client.c
+
+* openssl s_server
+模拟服务器, s_server_main() in ~/apps/s_server.c
+
 * SSL_do_handshake()
 定义文件：~/ssl/ssl_lib.c
 作用： 握手协商入口
 
 #+BEGIN_EXAMPLE
 -SSL_connect()                      客户端启动协商, ssl/ssl_lib.c
-  -SSL_set_accept_state()
+  -SSL_set_connect_state()
   -SSL_do_handshake()
     -ossl_statem_connect()          ssl/statem/statem.c
-      -state_machine()              状态机驱动的握手流程
+      -state_machine(,0)            状态机驱动的握手流程
   
 -SSL_accept()                       服务器端启动协商, ssl/ssl_lib.c
   -SSL_set_accept_state()
   -SSL_do_handshake()
     -ossl_statem_accept()           ssl/statem/statem.c
-      -state_machine()
+      -state_machine(,1)
 #+END_EXAMPLE
 
 * 名词解释

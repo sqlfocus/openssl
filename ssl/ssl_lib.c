@@ -492,7 +492,7 @@ int SSL_clear(SSL *s)
         && (s->method != s->ctx->method)) {
         s->method->ssl_free(s);
         s->method = s->ctx->method;
-        if (!s->method->ssl_new(s))
+        if (!s->method->ssl_new(s))     /* tls1_new() */
             return (0);
     } else
         s->method->ssl_clear(s);        /* 初始化SSL对象, tls1_clear() */
@@ -3217,7 +3217,7 @@ int SSL_do_handshake(SSL *s)
 
     ossl_statem_check_finish_init(s, -1);
 
-    s->method->ssl_renegotiate_check(s, 0);  /* 重协商要求无悬挂数据 */
+    s->method->ssl_renegotiate_check(s, 0);  /* 重协商要求无悬挂数据, ssl3_renegotiate_check() */
 
     if (SSL_in_init(s) || SSL_in_before(s)) {
         if ((s->mode & SSL_MODE_ASYNC) && ASYNC_get_current_job() == NULL) {

@@ -17,7 +17,7 @@ struct rsa_st {
      */
     int pad;
     long version;
-    const RSA_METHOD *meth;
+    const RSA_METHOD *meth;  /* rsa_pkcs1_ossl_meth */
     /* functional reference if 'meth' is ENGINE-provided */
     ENGINE *engine;
     BIGNUM *n;

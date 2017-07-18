@@ -13,7 +13,7 @@
  * non-record layer code should be using these structures in any way.        *
  *                                                                           *
  *****************************************************************************/
-
+/* SSL记录缓存 */
 typedef struct ssl3_buffer_st {
     /* at least SSL3_RT_MAX_PACKET_SIZE bytes, see ssl3_setup_buffers() */
     unsigned char *buf;
@@ -29,13 +29,14 @@ typedef struct ssl3_buffer_st {
 
 #define SEQ_NUM_SIZE                            8
 
+/* 记录描述 */
 typedef struct ssl3_record_st {
     /* Record layer version */
     /* r */
     int rec_version;
     /* type of record */
     /* r */
-    int type;
+    int type;               /* 记录第一个字节，协议, SSL3_RT_ALERT */
     /* How many bytes available */
     /* rw */
     size_t length;
@@ -59,7 +60,7 @@ typedef struct ssl3_record_st {
     unsigned char *comp;
     /* Whether the data from this record has already been read or not */
     /* r */
-    unsigned int read;
+    unsigned int read;      /* 0/1, 是否已经被处理? */
     /* epoch number, needed by DTLS1 */
     /* r */
     unsigned long epoch;
@@ -143,17 +144,17 @@ typedef struct record_layer_st {
     /* where we are when reading */
     int rstate;             /* 如 SSL_ST_READ_HEADER */
     /* How many pipelines can be used to read data */
-    size_t numrpipes;
+    size_t numrpipes;                      /* 已读取的记录数，有效的->rrec[]大小 */
     /* How many pipelines can be used to write data */
-    size_t numwpipes;
+    size_t numwpipes;       /* ->wbuf[]可用元素个数 */
     /* read IO goes into here */
-    SSL3_BUFFER rbuf;
+    SSL3_BUFFER rbuf;                      /* 读取报文缓存 */
     /* write IO goes into here */
-    SSL3_BUFFER wbuf[SSL_MAX_PIPELINES];
+    SSL3_BUFFER wbuf[SSL_MAX_PIPELINES];   /* 待发送的缓存报文 */
     /* each decoded record goes in here */
-    SSL3_RECORD rrec[SSL_MAX_PIPELINES];
+    SSL3_RECORD rrec[SSL_MAX_PIPELINES];   /* 记录描述信息 */
     /* used internally to point at a raw packet */
-    unsigned char *packet;
+    unsigned char *packet;    /* =&rbuf->buf[0] */
     size_t packet_length;
     /* number of bytes sent so far */
     size_t wnum;
@@ -179,7 +180,7 @@ typedef struct record_layer_st {
     /* Set to true if this is the first record in a connection */
     unsigned int is_first_record;
     /* Count of the number of consecutive warning alerts received */
-    unsigned int alert_count;
+    unsigned int alert_count;                      /* 连续告警记录数 */
     DTLS_RECORD_LAYER *d;
 } RECORD_LAYER;
 

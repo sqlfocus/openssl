@@ -156,7 +156,7 @@ int early_data_count_ok(SSL *s, size_t length, size_t overhead, int *al)
  * SSL3_RT_APPLICATION_DATA. The number of records returned will always be <=
  * |max_pipelines|
  */
-/* used only by ssl3_read_bytes */
+/* used only by ssl3_read_bytes *//* 读取记录 */
 int ssl3_get_record(SSL *s)
 {
     int al;
@@ -179,8 +179,8 @@ int ssl3_get_record(SSL *s)
     rbuf = RECORD_LAYER_get_rbuf(&s->rlayer);
     max_recs = s->max_pipelines;
     if (max_recs == 0)
-        max_recs = 1;
-    sess = s->session;
+        max_recs = 1;      /* 默认读取一个记录 */
+    sess = s->session;     /* 会话 */
 
     do {
         thisrr = &rr[num_recs];
@@ -192,11 +192,13 @@ int ssl3_get_record(SSL *s)
             size_t sslv2len;
             unsigned int type;
 
+            /* 读取报文 */
             rret = ssl3_read_n(s, SSL3_RT_HEADER_LENGTH,
                                SSL3_BUFFER_get_len(rbuf), 0,
                                num_recs == 0 ? 1 : 0, &n);
             if (rret <= 0)
                 return rret;     /* error or non-blocking */
+            /* 设置读取报文体 */
             RECORD_LAYER_set_rstate(&s->rlayer, SSL_ST_READ_BODY);
 
             p = RECORD_LAYER_get_packet(&s->rlayer);

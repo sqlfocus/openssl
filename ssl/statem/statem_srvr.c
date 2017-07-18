@@ -183,13 +183,13 @@ int ossl_statem_server_read_transition(SSL *s, int mt)
     case TLS_ST_BEFORE:
     case TLS_ST_OK:
     case DTLS_ST_SW_HELLO_VERIFY_REQUEST:
-        if (mt == SSL3_MT_CLIENT_HELLO) {
+        if (mt == SSL3_MT_CLIENT_HELLO) {  /* 跳转到ClientHello */
             st->hand_state = TLS_ST_SR_CLNT_HELLO;
             return 1;
         }
         break;
 
-    case TLS_ST_SW_SRVR_DONE:
+    case TLS_ST_SW_SRVR_DONE:              /* 已发送ServerHelloDone */
         /*
          * If we get a CKE message after a ServerDone then either
          * 1) We didn't request a Certificate
@@ -221,7 +221,7 @@ int ossl_statem_server_read_transition(SSL *s, int mt)
                 }
             } else {
                 st->hand_state = TLS_ST_SR_KEY_EXCH;
-                return 1;
+                return 1;                  /* 收到ClientKeyExchange消息 */
             }
         } else if (s->s3->tmp.cert_request) {
             if (mt == SSL3_MT_CERTIFICATE) {
@@ -238,7 +238,7 @@ int ossl_statem_server_read_transition(SSL *s, int mt)
         }
         break;
 
-    case TLS_ST_SR_KEY_EXCH:
+    case TLS_ST_SR_KEY_EXCH:               /* 收到ClientKeyExchange消息 */
         /*
          * We should only process a CertificateVerify message if we have
          * received a Certificate from the client. If so then |s->session->peer|
@@ -273,7 +273,7 @@ int ossl_statem_server_read_transition(SSL *s, int mt)
         }
         break;
 
-    case TLS_ST_SR_CHANGE:
+    case TLS_ST_SR_CHANGE:                 /* 收到ChangeCipherSpec消息 */
 #ifndef OPENSSL_NO_NEXTPROTONEG
         if (s->s3->npn_seen) {
             if (mt == SSL3_MT_NEXT_PROTO) {
@@ -499,7 +499,7 @@ static WRITE_TRAN ossl_statem_server13_write_transition(SSL *s)
 /*
  * ossl_statem_server_write_transition() works out what handshake state to move
  * to next when the server is writing messages to be sent to the client.
- */
+ *//* 服务器端 WRITE_STATE_TRANSITION 子状态处理函数，决定发送报文后跳转的子状态 */
 WRITE_TRAN ossl_statem_server_write_transition(SSL *s)
 {
     OSSL_STATEM *st = &s->statem;
@@ -531,7 +531,7 @@ WRITE_TRAN ossl_statem_server_write_transition(SSL *s)
         }
         /* Fall through */
 
-    case TLS_ST_BEFORE:
+    case TLS_ST_BEFORE:        /* 起始状态，直接跳转到读子状态机，等待ClientHello */
         /* Just go straight to trying to read from the client */
         return WRITE_TRAN_FINISHED;
 
@@ -539,7 +539,7 @@ WRITE_TRAN ossl_statem_server_write_transition(SSL *s)
         st->hand_state = TLS_ST_OK;
         return WRITE_TRAN_CONTINUE;
 
-    case TLS_ST_SR_CLNT_HELLO:
+    case TLS_ST_SR_CLNT_HELLO: /* 接收到ClientHello后，并解析完毕，跳转到发送server hello */
         if (SSL_IS_DTLS(s) && !s->d1->cookie_verified
             && (SSL_get_options(s) & SSL_OP_COOKIE_EXCHANGE))
             st->hand_state = DTLS_ST_SW_HELLO_VERIFY_REQUEST;
@@ -550,7 +550,7 @@ WRITE_TRAN ossl_statem_server_write_transition(SSL *s)
     case DTLS_ST_SW_HELLO_VERIFY_REQUEST:
         return WRITE_TRAN_FINISHED;
 
-    case TLS_ST_SW_SRVR_HELLO:
+    case TLS_ST_SW_SRVR_HELLO: /* 发送ServerHello消息 */
         if (s->hit) {
             if (s->ext.ticket_expected)
                 st->hand_state = TLS_ST_SW_SESSION_TICKET;
@@ -561,9 +561,9 @@ WRITE_TRAN ossl_statem_server_write_transition(SSL *s)
             /* normal PSK or SRP */
             if (!(s->s3->tmp.new_cipher->algorithm_auth &
                   (SSL_aNULL | SSL_aSRP | SSL_aPSK))) {
-                st->hand_state = TLS_ST_SW_CERT;
+                st->hand_state = TLS_ST_SW_CERT;        /* 发送公钥证书 */
             } else if (send_server_key_exchange(s)) {
-                st->hand_state = TLS_ST_SW_KEY_EXCH;
+                st->hand_state = TLS_ST_SW_KEY_EXCH;    /* */
             } else if (send_certificate_request(s)) {
                 st->hand_state = TLS_ST_SW_CERT_REQ;
             } else {
@@ -572,7 +572,7 @@ WRITE_TRAN ossl_statem_server_write_transition(SSL *s)
         }
         return WRITE_TRAN_CONTINUE;
 
-    case TLS_ST_SW_CERT:
+    case TLS_ST_SW_CERT:       /* 发送Certificate消息 */
         if (s->ext.status_expected) {
             st->hand_state = TLS_ST_SW_CERT_STATUS;
             return WRITE_TRAN_CONTINUE;
@@ -597,10 +597,10 @@ WRITE_TRAN ossl_statem_server_write_transition(SSL *s)
         st->hand_state = TLS_ST_SW_SRVR_DONE;
         return WRITE_TRAN_CONTINUE;
 
-    case TLS_ST_SW_SRVR_DONE:
+    case TLS_ST_SW_SRVR_DONE:  /* 发送了serverhellodone消息 */
         return WRITE_TRAN_FINISHED;
 
-    case TLS_ST_SR_FINISHED:
+    case TLS_ST_SR_FINISHED:   /* 收到了Finish消息 */
         if (s->hit) {
             st->hand_state = TLS_ST_OK;
             return WRITE_TRAN_CONTINUE;
@@ -619,11 +619,11 @@ WRITE_TRAN ossl_statem_server_write_transition(SSL *s)
         st->hand_state = TLS_ST_SW_FINISHED;
         return WRITE_TRAN_CONTINUE;
 
-    case TLS_ST_SW_FINISHED:
+    case TLS_ST_SW_FINISHED:   /* 发送了Finish消息 */
         if (s->hit) {
             return WRITE_TRAN_FINISHED;
         }
-        st->hand_state = TLS_ST_OK;
+        st->hand_state = TLS_ST_OK;   /* 退出 */
         return WRITE_TRAN_CONTINUE;
     }
 }
@@ -656,7 +656,7 @@ WORK_STATE ossl_statem_server_pre_work(SSL *s, WORK_STATE wst)
         }
         break;
 
-    case TLS_ST_SW_SRVR_HELLO:
+    case TLS_ST_SW_SRVR_HELLO:    /* 已解析完毕ClientHello，准备发送ServerHello */
         if (SSL_IS_DTLS(s)) {
             /*
              * Messages we write from now on should be buffered and
@@ -666,7 +666,7 @@ WORK_STATE ossl_statem_server_pre_work(SSL *s, WORK_STATE wst)
         }
         break;
 
-    case TLS_ST_SW_SRVR_DONE:
+    case TLS_ST_SW_SRVR_DONE:     /* 发送ServerHelloDone消息 */
 #ifndef OPENSSL_NO_SCTP
         if (SSL_IS_DTLS(s) && BIO_dgram_is_sctp(SSL_get_wbio(s)))
             return dtls_wait_for_dry(s);
@@ -690,7 +690,7 @@ WORK_STATE ossl_statem_server_pre_work(SSL *s, WORK_STATE wst)
         }
         break;
 
-    case TLS_ST_SW_CHANGE:
+    case TLS_ST_SW_CHANGE:        /* 发送ChangeCipherSpec消息 */
         s->session->cipher = s->s3->tmp.new_cipher;
         if (!s->method->ssl3_enc->setup_key_block(s)) {
             ossl_statem_set_error(s);
@@ -712,7 +712,7 @@ WORK_STATE ossl_statem_server_pre_work(SSL *s, WORK_STATE wst)
             return WORK_FINISHED_CONTINUE;
         /* Fall through */
 
-    case TLS_ST_OK:
+    case TLS_ST_OK:               /* 已经发送Finish消息 */
         return tls_finish_handshake(s, wst, 1);
     }
 
@@ -763,7 +763,7 @@ WORK_STATE ossl_statem_server_post_work(SSL *s, WORK_STATE wst)
         s->first_packet = 1;
         break;
 
-    case TLS_ST_SW_SRVR_HELLO:
+    case TLS_ST_SW_SRVR_HELLO:     /* 发送ServerHello消息 */
 #ifndef OPENSSL_NO_SCTP
         if (SSL_IS_DTLS(s) && s->hit) {
             unsigned char sctpauthkey[64];
@@ -829,12 +829,12 @@ WORK_STATE ossl_statem_server_post_work(SSL *s, WORK_STATE wst)
             dtls1_reset_seq_numbers(s, SSL3_CC_WRITE);
         break;
 
-    case TLS_ST_SW_SRVR_DONE:
+    case TLS_ST_SW_SRVR_DONE:       /* 发送了ServerHelloDone消息 */
         if (statem_flush(s) != 1)
             return WORK_MORE_A;
         break;
 
-    case TLS_ST_SW_FINISHED:
+    case TLS_ST_SW_FINISHED:        /* 发送了Finish消息 */
         if (statem_flush(s) != 1)
             return WORK_MORE_A;
 #ifndef OPENSSL_NO_SCTP
@@ -891,7 +891,7 @@ int ossl_statem_server_construct_message(SSL *s, WPACKET *pkt,
         /* Shouldn't happen */
         return 0;
 
-    case TLS_ST_SW_CHANGE:
+    case TLS_ST_SW_CHANGE:       /* 发送Changecipherspec消息 */
         if (SSL_IS_DTLS(s))
             *confunc = dtls_construct_change_cipher_spec;
         else
@@ -910,12 +910,12 @@ int ossl_statem_server_construct_message(SSL *s, WPACKET *pkt,
         *mt = SSL3_MT_HELLO_REQUEST;
         break;
 
-    case TLS_ST_SW_SRVR_HELLO:
+    case TLS_ST_SW_SRVR_HELLO:   /* 发送ServerHello消息 */
         *confunc = tls_construct_server_hello;
         *mt = SSL3_MT_SERVER_HELLO;
         break;
 
-    case TLS_ST_SW_CERT:
+    case TLS_ST_SW_CERT:         /* 发送Certificate消息 */
         *confunc = tls_construct_server_certificate;
         *mt = SSL3_MT_CERTIFICATE;
         break;
@@ -936,7 +936,7 @@ int ossl_statem_server_construct_message(SSL *s, WPACKET *pkt,
         *mt = SSL3_MT_CERTIFICATE_REQUEST;
         break;
 
-    case TLS_ST_SW_SRVR_DONE:
+    case TLS_ST_SW_SRVR_DONE:    /* 发送ServerHelloDone消息 */
         *confunc = tls_construct_server_done;
         *mt = SSL3_MT_SERVER_DONE;
         break;
@@ -951,7 +951,7 @@ int ossl_statem_server_construct_message(SSL *s, WPACKET *pkt,
         *mt = SSL3_MT_CERTIFICATE_STATUS;
         break;
 
-    case TLS_ST_SW_FINISHED:
+    case TLS_ST_SW_FINISHED:     /* 发送Finish消息 */
         *confunc = tls_construct_finished;
         *mt = SSL3_MT_FINISHED;
         break;
@@ -1046,7 +1046,7 @@ size_t ossl_statem_server_max_message_size(SSL *s)
 
 /*
  * Process a message that the server has received from the client.
- */
+ *//* 处理从客户端收到的记录 */
 MSG_PROCESS_RETURN ossl_statem_server_process_message(SSL *s, PACKET *pkt)
 {
     OSSL_STATEM *st = &s->statem;
@@ -1065,7 +1065,7 @@ MSG_PROCESS_RETURN ossl_statem_server_process_message(SSL *s, PACKET *pkt)
     case TLS_ST_SR_CERT:
         return tls_process_client_certificate(s, pkt);
 
-    case TLS_ST_SR_KEY_EXCH:
+    case TLS_ST_SR_KEY_EXCH:  /* 收到了ClientKeyExchange消息 */
         return tls_process_client_key_exchange(s, pkt);
 
     case TLS_ST_SR_CERT_VRFY:
@@ -1076,10 +1076,10 @@ MSG_PROCESS_RETURN ossl_statem_server_process_message(SSL *s, PACKET *pkt)
         return tls_process_next_proto(s, pkt);
 #endif
 
-    case TLS_ST_SR_CHANGE:
+    case TLS_ST_SR_CHANGE:    /* 收到ChangeCipherSpec消息 */
         return tls_process_change_cipher_spec(s, pkt);
 
-    case TLS_ST_SR_FINISHED:
+    case TLS_ST_SR_FINISHED:  /* 收到Finish消息 */
         return tls_process_finished(s, pkt);
 
     case TLS_ST_SR_KEY_UPDATE:
@@ -1091,7 +1091,7 @@ MSG_PROCESS_RETURN ossl_statem_server_process_message(SSL *s, PACKET *pkt)
 /*
  * Perform any further processing required following the receipt of a message
  * from the client
- */
+ *//* 对从客户端收到的消息做进一步处理 */
 WORK_STATE ossl_statem_server_post_process_message(SSL *s, WORK_STATE wst)
 {
     OSSL_STATEM *st = &s->statem;
@@ -1248,6 +1248,7 @@ static void ssl_check_for_safari(SSL *s, const CLIENTHELLO_MSG *hello)
 }
 #endif                          /* !OPENSSL_NO_EC */
 
+/* 服务器处理ClientHello消息，结果保存到 SSL->clienthello */
 MSG_PROCESS_RETURN tls_process_client_hello(SSL *s, PACKET *pkt)
 {
     int al = SSL_AD_INTERNAL_ERROR;
@@ -1256,6 +1257,7 @@ MSG_PROCESS_RETURN tls_process_client_hello(SSL *s, PACKET *pkt)
     static const unsigned char null_compression = 0;
     CLIENTHELLO_MSG *clienthello;
 
+    /* 分配结构体，存放解析消息 */
     clienthello = OPENSSL_zalloc(sizeof(*clienthello));
     if (clienthello == NULL) {
         SSLerr(SSL_F_TLS_PROCESS_CLIENT_HELLO, ERR_R_INTERNAL_ERROR);
@@ -1309,13 +1311,14 @@ MSG_PROCESS_RETURN tls_process_client_hello(SSL *s, PACKET *pkt)
         }
     }
 
+    /* 提取客户端想要工作的TLS版本 */
     if (!PACKET_get_net_2(pkt, &clienthello->legacy_version)) {
         al = SSL_AD_DECODE_ERROR;
         SSLerr(SSL_F_TLS_PROCESS_CLIENT_HELLO, SSL_R_LENGTH_TOO_SHORT);
         goto err;
     }
 
-    /* Parse the message and load client random. */
+    /* 解析消息，Parse the message and load client random. */
     if (clienthello->isv2) {
         /*
          * Handle an SSLv2 backwards compatible ClientHello
@@ -1374,10 +1377,10 @@ MSG_PROCESS_RETURN tls_process_client_hello(SSL *s, PACKET *pkt)
         PACKET_null_init(&clienthello->extensions);
     } else {
         /* Regular ClientHello. */
-        if (!PACKET_copy_bytes(pkt, clienthello->random, SSL3_RANDOM_SIZE)
+        if (!PACKET_copy_bytes(pkt, clienthello->random, SSL3_RANDOM_SIZE)  /* 获取客户端随机数*/
             || !PACKET_get_length_prefixed_1(pkt, &session_id)
             || !PACKET_copy_all(&session_id, clienthello->session_id,
-                    SSL_MAX_SSL_SESSION_ID_LENGTH,
+                                SSL_MAX_SSL_SESSION_ID_LENGTH,              /* 获取会话ID，以支持会话恢复 */
                     &clienthello->session_id_len)) {
             al = SSL_AD_DECODE_ERROR;
             SSLerr(SSL_F_TLS_PROCESS_CLIENT_HELLO, SSL_R_LENGTH_MISMATCH);
@@ -1409,19 +1412,19 @@ MSG_PROCESS_RETURN tls_process_client_hello(SSL *s, PACKET *pkt)
         }
 
         if (!PACKET_get_length_prefixed_2(pkt, &clienthello->ciphersuites)) {
-            al = SSL_AD_DECODE_ERROR;
+            al = SSL_AD_DECODE_ERROR;                       /* 获取客户端推荐的加解密套件 */
             SSLerr(SSL_F_TLS_PROCESS_CLIENT_HELLO, SSL_R_LENGTH_MISMATCH);
             goto f_err;
         }
 
         if (!PACKET_get_length_prefixed_1(pkt, &compression)) {
-            al = SSL_AD_DECODE_ERROR;
+            al = SSL_AD_DECODE_ERROR;                       /* 获取客户端支持的压缩算法 */
             SSLerr(SSL_F_TLS_PROCESS_CLIENT_HELLO, SSL_R_LENGTH_MISMATCH);
             goto f_err;
         }
 
         /* Could be empty. */
-        if (PACKET_remaining(pkt) == 0) {
+        if (PACKET_remaining(pkt) == 0) {                   /* 获取拓展部分 */
             PACKET_null_init(&clienthello->extensions);
         } else {
             if (!PACKET_get_length_prefixed_2(pkt, &clienthello->extensions)) {
@@ -1432,6 +1435,7 @@ MSG_PROCESS_RETURN tls_process_client_hello(SSL *s, PACKET *pkt)
         }
     }
 
+    /* 提取压缩算法配置 */
     if (!PACKET_copy_all(&compression, clienthello->compressions,
                          MAX_COMPRESSIONS_SIZE,
                          &clienthello->compressions_len)) {
@@ -1440,7 +1444,8 @@ MSG_PROCESS_RETURN tls_process_client_hello(SSL *s, PACKET *pkt)
         goto f_err;
     }
 
-    /* Preserve the raw extensions PACKET for later use */
+    /* 预留拓展部分内存，待后续处理；
+       Preserve the raw extensions PACKET for later use */
     extensions = clienthello->extensions;
     if (!tls_collect_extensions(s, &extensions, EXT_CLIENT_HELLO,
                                 &clienthello->pre_proc_exts, &al,
@@ -1448,6 +1453,8 @@ MSG_PROCESS_RETURN tls_process_client_hello(SSL *s, PACKET *pkt)
         /* SSLerr already been called */
         goto f_err;
     }
+
+    /* 保存 */
     s->clienthello = clienthello;
 
     return MSG_PROCESS_CONTINUE_PROCESSING;
@@ -1462,6 +1469,7 @@ MSG_PROCESS_RETURN tls_process_client_hello(SSL *s, PACKET *pkt)
     return MSG_PROCESS_ERROR;
 }
 
+/* ClientHello消息 WORK_MORE_A 阶段处理函数 */
 static int tls_early_post_process_client_hello(SSL *s, int *al)
 {
     unsigned int j;
@@ -1493,7 +1501,7 @@ static int tls_early_post_process_client_hello(SSL *s, int *al)
         }
     }
 
-    /* Set up the client_random */
+    /* 保存客户端随机数，Set up the client_random */
     memcpy(s->s3->client_random, clienthello->random, SSL3_RANDOM_SIZE);
 
     /* Choose the version */
@@ -1515,7 +1523,7 @@ static int tls_early_post_process_client_hello(SSL *s, int *al)
     /*
      * Do SSL/TLS version negotiation if applicable. For DTLS we just check
      * versions are potentially compatible. Version negotiation comes later.
-     */
+     *//* 选择TLS版本 */
     if (!SSL_IS_DTLS(s)) {
         protverr = ssl_choose_server_version(s, clienthello, &dgrd);
     } else if (s->method->version != DTLS_ANY_VERSION &&
@@ -1601,7 +1609,7 @@ static int tls_early_post_process_client_hello(SSL *s, int *al)
      * unset): for servers, this essentially just means that the
      * SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION setting will be
      * ignored.
-     */
+     *//* 会话恢复 */
     if (clienthello->isv2 ||
         (s->new_session &&
          (s->options & SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION))) {
@@ -1609,7 +1617,7 @@ static int tls_early_post_process_client_hello(SSL *s, int *al)
             goto err;
     } else {
         i = ssl_get_prev_session(s, clienthello, al);
-        if (i == 1) {
+        if (i == 1) {                  /* 执行会话恢复 */
             /* previous session */
             s->hit = 1;
         } else if (i == -1) {
@@ -1621,6 +1629,7 @@ static int tls_early_post_process_client_hello(SSL *s, int *al)
         }
     }
 
+    /* 获取客户端传递过来的加解密套件 */
     if (!ssl_cache_cipherlist(s, &clienthello->ciphersuites,
                               clienthello->isv2, al) ||
         !bytes_to_cipher_list(s, &clienthello->ciphersuites, &ciphers, &scsvs,
@@ -1659,7 +1668,8 @@ static int tls_early_post_process_client_hello(SSL *s, int *al)
         }
     }
 
-    /* If it is a hit, check that the cipher is in the list */
+    /* 会话恢复，验证是否加解密套件是否合理
+       If it is a hit, check that the cipher is in the list */
     if (s->hit) {
         j = 0;
         id = s->session->cipher->id;
@@ -1719,7 +1729,7 @@ static int tls_early_post_process_client_hello(SSL *s, int *al)
      * for not reused session only. We need to generate server_random before
      * calling tls_session_secret_cb in order to allow SessionTicket
      * processing to use it in key derivation.
-     */
+     *//* 生成服务器端随机数 */
     {
         unsigned char *pos;
         pos = s->s3->server_random;
@@ -1939,11 +1949,13 @@ static int tls_handle_status_request(SSL *s, int *al)
     return 1;
 }
 
+/* ClientHello消息进一步处理 */
 WORK_STATE tls_post_process_client_hello(SSL *s, WORK_STATE wst)
 {
     int al = SSL_AD_HANDSHAKE_FAILURE;
     const SSL_CIPHER *cipher;
 
+    /* 选择TLS版本，会话恢复，生成服务器随机数等 */
     if (wst == WORK_MORE_A) {
         int rv = tls_early_post_process_client_hello(s, &al);
         if (rv == 0) {
@@ -1954,13 +1966,15 @@ WORK_STATE tls_post_process_client_hello(SSL *s, WORK_STATE wst)
             return WORK_MORE_A;
         wst = WORK_MORE_B;
     }
+    
+    /* 选择加解密套件 */
     if (wst == WORK_MORE_B) {
         if (!s->hit || s->hello_retry_request) {
             /* Let cert callback update server certificates if required */
             if (s->cert->cert_cb) {
                 int rv = s->cert->cert_cb(s, s->cert->cert_cb_arg);
                 if (rv == 0) {
-                    al = SSL_AD_INTERNAL_ERROR;
+                    al = SSL_clienthelloAD_INTERNAL_ERROR;
                     SSLerr(SSL_F_TLS_POST_PROCESS_CLIENT_HELLO,
                            SSL_R_CERT_CB_ERROR);
                     goto f_err;
@@ -1971,7 +1985,7 @@ WORK_STATE tls_post_process_client_hello(SSL *s, WORK_STATE wst)
                 }
                 s->rwstate = SSL_NOTHING;
             }
-            cipher =
+            cipher =          /* 选择加解密套件 */
                 ssl3_choose_cipher(s, s->session->ciphers, SSL_get_ciphers(s));
 
             if (cipher == NULL) {
@@ -1988,9 +2002,9 @@ WORK_STATE tls_post_process_client_hello(SSL *s, WORK_STATE wst)
                 al = SSL_AD_ILLEGAL_PARAMETER;
                 SSLerr(SSL_F_TLS_POST_PROCESS_CLIENT_HELLO, SSL_R_BAD_CIPHER);
                 goto f_err;
-            }
+            }                 /* 保存选择结果 */
             s->s3->tmp.new_cipher = cipher;
-            if (!s->hit) {
+            if (!s->hit) {    /* 保存套件对应的算法信息 */
                 if (!tls_choose_sigalg(s, &al))
                     goto f_err;
                 /* check whether we should disable session resumption */
@@ -2006,7 +2020,7 @@ WORK_STATE tls_post_process_client_hello(SSL *s, WORK_STATE wst)
         } else {
             /* Session-id reuse */
             s->s3->tmp.new_cipher = s->session->cipher;
-        }
+        }                     /* 会话恢复，直接使用会话的套件 */
 
         /*-
          * we now have the following setup.
@@ -2065,6 +2079,7 @@ WORK_STATE tls_post_process_client_hello(SSL *s, WORK_STATE wst)
     return WORK_ERROR;
 }
 
+/* 构建ServerHello消息 */
 int tls_construct_server_hello(SSL *s, WPACKET *pkt)
 {
     int compm, al = SSL_AD_INTERNAL_ERROR;
@@ -2620,6 +2635,7 @@ static int tls_process_cke_psk_preamble(SSL *s, PACKET *pkt, int *al)
 #endif
 }
 
+/* 处理RSA类型的ClientKeyExchange */
 static int tls_process_cke_rsa(SSL *s, PACKET *pkt, int *al)
 {
 #ifndef OPENSSL_NO_RSA
@@ -2632,6 +2648,7 @@ static int tls_process_cke_rsa(SSL *s, PACKET *pkt, int *al)
     unsigned char *rsa_decrypt = NULL;
     int ret = 0;
 
+    /* 获取私钥 */
     rsa = EVP_PKEY_get0_RSA(s->cert->pkeys[SSL_PKEY_RSA].privatekey);
     if (rsa == NULL) {
         *al = SSL_AD_HANDSHAKE_FAILURE;
@@ -2639,7 +2656,7 @@ static int tls_process_cke_rsa(SSL *s, PACKET *pkt, int *al)
         return 0;
     }
 
-    /* SSLv3 and pre-standard DTLS omit the length bytes. */
+    /* 调整报文，剥离报文长度字段，SSLv3 and pre-standard DTLS omit the length bytes. */
     if (s->version == SSL3_VERSION || s->version == DTLS1_BAD_VER) {
         enc_premaster = *pkt;
     } else {
@@ -2656,7 +2673,7 @@ static int tls_process_cke_rsa(SSL *s, PACKET *pkt, int *al)
      * iterate over the entire size of a premaster secret
      * (SSL_MAX_MASTER_KEY_LENGTH). Reject overly short RSA keys because
      * their ciphertext cannot accommodate a premaster secret anyway.
-     */
+     *//* 分配内存，盛放解密结果 */
     if (RSA_size(rsa) < SSL_MAX_MASTER_KEY_LENGTH) {
         *al = SSL_AD_INTERNAL_ERROR;
         SSLerr(SSL_F_TLS_PROCESS_CKE_RSA, RSA_R_KEY_SIZE_TOO_SMALL);
@@ -2686,6 +2703,7 @@ static int tls_process_cke_rsa(SSL *s, PACKET *pkt, int *al)
      * the timing-sensitive code below.
      */
      /* TODO(size_t): Convert this function */
+    /* 解密 */
     decrypt_len = (int)RSA_private_decrypt((int)PACKET_remaining(&enc_premaster),
                                            PACKET_data(&enc_premaster),
                                            rsa_decrypt, rsa, RSA_NO_PADDING);
@@ -2694,6 +2712,7 @@ static int tls_process_cke_rsa(SSL *s, PACKET *pkt, int *al)
 
     /* Check the padding. See RFC 3447, section 7.2.2. */
 
+    /* 验证填充数据 */
     /*
      * The smallest padded premaster is 11 bytes of overhead. Small keys
      * are publicly invalid, so this may return immediately. This ensures
@@ -2766,6 +2785,7 @@ static int tls_process_cke_rsa(SSL *s, PACKET *pkt, int *al)
                                    rand_premaster_secret[j]);
     }
 
+    /* 产生会话密钥 */
     if (!ssl_generate_master_secret(s, rsa_decrypt + padding_len,
                                     sizeof(rand_premaster_secret), 0)) {
         *al = SSL_AD_INTERNAL_ERROR;
@@ -3065,6 +3085,7 @@ MSG_PROCESS_RETURN tls_process_client_key_exchange(SSL *s, PACKET *pkt)
     int al = -1;
     unsigned long alg_k;
 
+    /* 提取用于密钥交换的算法 */
     alg_k = s->s3->tmp.new_cipher->algorithm_mkey;
 
     /* For PSK parse and retrieve identity, obtain PSK key */
@@ -3085,7 +3106,7 @@ MSG_PROCESS_RETURN tls_process_client_key_exchange(SSL *s, PACKET *pkt)
             SSLerr(SSL_F_TLS_PROCESS_CLIENT_KEY_EXCHANGE, ERR_R_INTERNAL_ERROR);
             goto err;
         }
-    } else if (alg_k & (SSL_kRSA | SSL_kRSAPSK)) {     /* RSA */
+    } else if (alg_k & (SSL_kRSA | SSL_kRSAPSK)) {     /* 处理RSA交换流程 */
         if (!tls_process_cke_rsa(s, pkt, &al))
             goto err;
     } else if (alg_k & (SSL_kDHE | SSL_kDHEPSK)) {

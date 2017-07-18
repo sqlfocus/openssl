@@ -298,9 +298,9 @@ static int state_machine(SSL *s, int server)
 
     cb = get_callback(s);
 
-    st->in_handshake++;
+    st->in_handshake++;                /* 开始协商 */
     if (!SSL_in_init(s) || SSL_in_before(s)) {
-        if (!SSL_clear(s))             /* 程序初始启动，清理握手信息 */
+        if (!SSL_clear(s))             /* 重协商???，清理握手信息 */
             return -1;
     }
 #ifndef OPENSSL_NO_SCTP
@@ -322,7 +322,7 @@ static int state_machine(SSL *s, int server)
             st->request_state = TLS_ST_BEFORE;
         }
 
-        s->server = server;
+        s->server = server;             /* 设置角色 */
         if (cb != NULL)
             cb(s, SSL_CB_HANDSHAKE_START, 1);
 
@@ -344,7 +344,7 @@ static int state_machine(SSL *s, int server)
             goto end;
         }
 
-        if (s->init_buf == NULL) {
+        if (s->init_buf == NULL) {      /* 初始化内存，用于握手协商 */
             if ((buf = BUF_MEM_new()) == NULL) {
                 goto end;
             }
@@ -355,7 +355,7 @@ static int state_machine(SSL *s, int server)
             buf = NULL;
         }
 
-        if (!ssl3_setup_buffers(s)) {
+        if (!ssl3_setup_buffers(s)) {   /* 构建SSL记录读写缓存 */
             goto end;
         }
         s->init_num = 0;
@@ -363,7 +363,7 @@ static int state_machine(SSL *s, int server)
         /*
          * Should have been reset by tls_process_finished, too.
          */
-        s->s3->change_cipher_spec = 0;
+        s->s3->change_cipher_spec = 0;  /* 尚未处理ChangeCipherSpec消息 */
 
         /*
          * Ok, we now need to push on a buffering BIO ...but not with
@@ -378,13 +378,13 @@ static int state_machine(SSL *s, int server)
 
         if ((SSL_in_before(s))
                 || s->renegotiate) {
-            if (!tls_setup_handshake(s)) {
+            if (!tls_setup_handshake(s)) {         /* 初始化TLS握手环境 */
                 ossl_statem_set_error(s);
                 goto end;
             }
 
             if (SSL_IS_FIRST_HANDSHAKE(s))
-                st->read_state_first_init = 1;
+                st->read_state_first_init = 1;     /* 首次协商 */
         }
 
         st->state = MSG_FLOW_WRITING;
@@ -393,7 +393,8 @@ static int state_machine(SSL *s, int server)
 
     /* 状态机跳转，读、写直到握手完成 */
     while (st->state != MSG_FLOW_FINISHED) {
-        if (st->state == MSG_FLOW_READING) {       /* 读状态 */
+        /* 读状态 */
+        if (st->state == MSG_FLOW_READING) {
             ssret = read_state_machine(s);
             if (ssret == SUB_STATE_FINISHED) {
                 st->state = MSG_FLOW_WRITING;
@@ -402,13 +403,14 @@ static int state_machine(SSL *s, int server)
                 /* NBIO or error */
                 goto end;
             }
-        } else if (st->state == MSG_FLOW_WRITING) {/* 写状态 */
+        /* 写状态 */    
+        } else if (st->state == MSG_FLOW_WRITING) {
             ssret = write_state_machine(s);
-            if (ssret == SUB_STATE_FINISHED) {
+            if (ssret == SUB_STATE_FINISHED) {  /* 读写状态切换 */
                 st->state = MSG_FLOW_READING;
                 init_read_state_machine(s);
             } else if (ssret == SUB_STATE_END_HANDSHAKE) {
-                st->state = MSG_FLOW_FINISHED;
+                st->state = MSG_FLOW_FINISHED;  /* 握手完成 */
             } else {
                 /* NBIO or error */
                 goto end;
@@ -475,14 +477,14 @@ static int grow_init_buf(SSL *s, size_t size) {
  * This function implements the sub-state machine when the message flow is in
  * MSG_FLOW_READING. The valid sub-states and transitions are:
  *
- * READ_STATE_HEADER <--+<-------------+
+ * READ_STATE_HEADER <--+<-------------+             读取消息头
  *        |             |              |
  *        v             |              |
- * READ_STATE_BODY -----+-->READ_STATE_POST_PROCESS
- *        |                            |
+ * READ_STATE_BODY -----+-->READ_STATE_POST_PROCESS  读取消息体，并处理
+ *        |                            |             POST_XXX, 可选
  *        +----------------------------+
  *        v
- * [SUB_STATE_FINISHED]
+ * [SUB_STATE_FINISHED]                              子状态结束
  *
  * READ_STATE_HEADER has the responsibility for reading in the message header
  * and transitioning the state of the handshake state machine.
@@ -496,7 +498,7 @@ static int grow_init_buf(SSL *s, size_t size) {
  * Any of the above states could result in an NBIO event occurring in which case
  * control returns to the calling application. When this function is recalled we
  * will resume in the same state where we left off.
- */
+ *//* 读状态机操控函数，接收报文并处理 */
 static SUB_STATE_RETURN read_state_machine(SSL *s)
 {
     OSSL_STATEM *st = &s->statem;
@@ -511,33 +513,35 @@ static SUB_STATE_RETURN read_state_machine(SSL *s)
 
     cb = get_callback(s);
 
-    if (s->server) {
+    /* 读子状态处理函数 */
+    if (s->server) {     /* 服务器 */
         transition = ossl_statem_server_read_transition;
         process_message = ossl_statem_server_process_message;
         max_message_size = ossl_statem_server_max_message_size;
         post_process_message = ossl_statem_server_post_process_message;
-    } else {
+    } else {             /* 客户端 */
         transition = ossl_statem_client_read_transition;
         process_message = ossl_statem_client_process_message;
         max_message_size = ossl_statem_client_max_message_size;
         post_process_message = ossl_statem_client_post_process_message;
     }
 
-    if (st->read_state_first_init) {
+    if (st->read_state_first_init) {    /* 首次握手协商 */
         s->first_packet = 1;
         st->read_state_first_init = 0;
     }
 
+    /* 读状态机跳转 */
     while (1) {
         switch (st->read_state) {
-        case READ_STATE_HEADER:
+        case READ_STATE_HEADER:     /* 起始状态，读记录头 */
             /* Get the state the peer wants to move to */
             if (SSL_IS_DTLS(s)) {
                 /*
                  * In DTLS we get the whole message in one go - header and body
                  */
                 ret = dtls_get_message(s, &mt, &len);
-            } else {
+            } else {                    /* 获取待处理的消息类型 */
                 ret = tls_get_message_header(s, &mt);
             }
 
@@ -556,12 +560,12 @@ static SUB_STATE_RETURN read_state_machine(SSL *s)
             /*
              * Validate that we are allowed to move to the new state and move
              * to that state if so
-             */
+             */                         /* 根据消息类型确定跳转，更新 OSSL_STATEM->hand_state */
             if (!transition(s, mt)) {
                 ossl_statem_set_error(s);
                 return SUB_STATE_ERROR;
             }
-
+                                        /* 检查消息大小 */
             if (s->s3->tmp.message_size > max_message_size(s)) {
                 ssl3_send_alert(s, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
                 SSLerr(SSL_F_READ_STATE_MACHINE, SSL_R_EXCESSIVE_MESSAGE_SIZE);
@@ -581,28 +585,28 @@ static SUB_STATE_RETURN read_state_machine(SSL *s)
             st->read_state = READ_STATE_BODY;
             /* Fall through */
 
-        case READ_STATE_BODY:
+        case READ_STATE_BODY:       /* 读记录体 */
             if (!SSL_IS_DTLS(s)) {
                 /* We already got this above for DTLS */
                 ret = tls_get_message_body(s, &len);
-                if (ret == 0) {
+                if (ret == 0) {         /* 读取消息体 */
                     /* Could be non-blocking IO */
                     return SUB_STATE_ERROR;
                 }
             }
 
-            s->first_packet = 0;
+            s->first_packet = 0;        /* 非第一个报文了!!! */
             if (!PACKET_buf_init(&pkt, s->init_msg, len)) {
                 ssl3_send_alert(s, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
                 SSLerr(SSL_F_READ_STATE_MACHINE, ERR_R_INTERNAL_ERROR);
                 return SUB_STATE_ERROR;
-            }
+            }                           /* 处理消息 */
             ret = process_message(s, &pkt);
 
             /* Discard the packet data */
-            s->init_num = 0;
+            s->init_num = 0;            /* 丢弃已处理的消息 */
 
-            switch (ret) {
+            switch (ret) {              /* 根据返回值确定跳转状态 */
             case MSG_PROCESS_ERROR:
                 return SUB_STATE_ERROR;
 
@@ -623,7 +627,7 @@ static SUB_STATE_RETURN read_state_machine(SSL *s)
             }
             break;
 
-        case READ_STATE_POST_PROCESS:
+        case READ_STATE_POST_PROCESS: /* 消息处理结束 */
             st->read_state_work = post_process_message(s, st->read_state_work);
             switch (st->read_state_work) {
             case WORK_ERROR:
@@ -668,7 +672,7 @@ static int statem_do_write(SSL *s)
         else
             return ssl3_do_write(s, SSL3_RT_CHANGE_CIPHER_SPEC);
     } else {
-        return ssl_do_write(s);
+        return ssl_do_write(s);   /* ssl3_do_write() */
     }
 }
 
@@ -686,16 +690,16 @@ static void init_write_state_machine(SSL *s)
  * This function implements the sub-state machine when the message flow is in
  * MSG_FLOW_WRITING. The valid sub-states and transitions are:
  *
- * +-> WRITE_STATE_TRANSITION ------> [SUB_STATE_FINISHED]
+ * +-> WRITE_STATE_TRANSITION ------> [SUB_STATE_FINISHED]        起始状态
  * |             |
  * |             v
- * |      WRITE_STATE_PRE_WORK -----> [SUB_STATE_END_HANDSHAKE]
+ * |      WRITE_STATE_PRE_WORK -----> [SUB_STATE_END_HANDSHAKE]   组包，准备消息
  * |             |
  * |             v
- * |       WRITE_STATE_SEND
+ * |       WRITE_STATE_SEND                                       发送消息
  * |             |
  * |             v
- * |     WRITE_STATE_POST_WORK
+ * |     WRITE_STATE_POST_WORK                                    发送消息后清理相关
  * |             |
  * +-------------+
  *
@@ -712,7 +716,7 @@ static void init_write_state_machine(SSL *s)
  * WRITE_STATE_POST_WORK performs any work necessary after the sending of the
  * message has been completed. As for WRITE_STATE_PRE_WORK this could also
  * result in an NBIO event.
- */
+ *//* 写状态机操控函数，代表应答，组装并发送报文 */
 static SUB_STATE_RETURN write_state_machine(SSL *s)
 {
     OSSL_STATEM *st = &s->statem;
@@ -743,6 +747,7 @@ static SUB_STATE_RETURN write_state_machine(SSL *s)
         get_construct_message_f = ossl_statem_client_construct_message;
     }
 
+    /* 写状态机跳转 */
     while (1) {
         switch (st->write_state) {
         case WRITE_STATE_TRANSITION:
@@ -754,16 +759,16 @@ static SUB_STATE_RETURN write_state_machine(SSL *s)
                     cb(s, SSL_CB_CONNECT_LOOP, 1);
             }
             switch (transition(s)) {
-            case WRITE_TRAN_CONTINUE:
+            case WRITE_TRAN_CONTINUE:   /* 下一个子状态机 */
                 st->write_state = WRITE_STATE_PRE_WORK;
                 st->write_state_work = WORK_MORE_A;
                 break;
 
-            case WRITE_TRAN_FINISHED:
+            case WRITE_TRAN_FINISHED:   /* 完成 */
                 return SUB_STATE_FINISHED;
                 break;
 
-            case WRITE_TRAN_ERROR:
+            case WRITE_TRAN_ERROR:      /* 出错 */
                 return SUB_STATE_ERROR;
             }
             break;
@@ -783,6 +788,8 @@ static SUB_STATE_RETURN write_state_machine(SSL *s)
             case WORK_FINISHED_STOP:
                 return SUB_STATE_END_HANDSHAKE;
             }
+            
+            /* 选择构建发送报文的函数及报文类型 */
             if (!get_construct_message_f(s, &pkt, &confunc, &mt)) {
                 ossl_statem_set_error(s);
                 return SUB_STATE_ERROR;
@@ -793,6 +800,7 @@ static SUB_STATE_RETURN write_state_machine(SSL *s)
                 st->write_state_work = WORK_MORE_A;
                 break;
             }
+            /* 构建发送报文 */
             if (!WPACKET_init(&pkt, s->init_buf)
                     || !ssl_set_handshake_header(s, &pkt, mt)
                     || (confunc != NULL && !confunc(s, &pkt))
@@ -809,6 +817,7 @@ static SUB_STATE_RETURN write_state_machine(SSL *s)
             if (SSL_IS_DTLS(s) && st->use_timer) {
                 dtls1_start_timer(s);
             }
+            /* 发送 */
             ret = statem_do_write(s);
             if (ret <= 0) {
                 return SUB_STATE_ERROR;

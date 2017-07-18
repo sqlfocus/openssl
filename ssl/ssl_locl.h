@@ -451,36 +451,36 @@ struct ssl_method_st {
     int version;                      /* 版本号 */
     unsigned flags;
     unsigned long mask;               /* */
-    int (*ssl_new) (SSL *s);
-    void (*ssl_clear) (SSL *s);
-    void (*ssl_free) (SSL *s);
+    int (*ssl_new) (SSL *s);          /* tls1_new() */
+    void (*ssl_clear) (SSL *s);       /* tls1_clear() */
+    void (*ssl_free) (SSL *s);        /* tls1_free() */
     int (*ssl_accept) (SSL *s);       /* 服务器角色的accept方法, ossl_statem_accept() */
     int (*ssl_connect) (SSL *s);      /* 客户端角色的connect方法, ossl_statem_connect() */
-    int (*ssl_read) (SSL *s, void *buf, size_t len, size_t *readbytes);
-    int (*ssl_peek) (SSL *s, void *buf, size_t len, size_t *readbytes);
-    int (*ssl_write) (SSL *s, const void *buf, size_t len, size_t *written);
-    int (*ssl_shutdown) (SSL *s);
+    int (*ssl_read) (SSL *s, void *buf, size_t len, size_t *readbytes); /* ssl3_read() */
+    int (*ssl_peek) (SSL *s, void *buf, size_t len, size_t *readbytes); /* ssl3_peek() */
+    int (*ssl_write) (SSL *s, const void *buf, size_t len, size_t *written); /* ssl3_write() */
+    int (*ssl_shutdown) (SSL *s);     /* ssl3_shutdown() */
     int (*ssl_renegotiate) (SSL *s);  /* 重协商, ssl3_renegotiate() */
     int (*ssl_renegotiate_check) (SSL *s, int); /* 重协商检测, ssl3_renegotiate_check() */
     int (*ssl_read_bytes) (SSL *s, int type, int *recvd_type,
                            unsigned char *buf, size_t len, int peek,
-                           size_t *readbytes);
+                           size_t *readbytes);  /* 读取指定字节数, ssl3_read_bytes() */
     int (*ssl_write_bytes) (SSL *s, int type, const void *buf_, size_t len,
-                            size_t *written);
-    int (*ssl_dispatch_alert) (SSL *s);
-    long (*ssl_ctrl) (SSL *s, int cmd, long larg, void *parg);
-    long (*ssl_ctx_ctrl) (SSL_CTX *ctx, int cmd, long larg, void *parg);
-    const SSL_CIPHER *(*get_cipher_by_char) (const unsigned char *ptr);
+                            size_t *written);   /* 发送指定字节数, ssl3_write_bytes() */
+    int (*ssl_dispatch_alert) (SSL *s);/* ssl3_dispatch_alert() */
+    long (*ssl_ctrl) (SSL *s, int cmd, long larg, void *parg);           /* ssl3_ctrl() */
+    long (*ssl_ctx_ctrl) (SSL_CTX *ctx, int cmd, long larg, void *parg); /* ssl3_ctx_ctrl() */
+    const SSL_CIPHER *(*get_cipher_by_char) (const unsigned char *ptr);  /* ssl3_get_cipher_by_char() */
     int (*put_cipher_by_char) (const SSL_CIPHER *cipher, WPACKET *pkt,
-                               size_t *len);
-    size_t (*ssl_pending) (const SSL *s);
-    int (*num_ciphers) (void);
-    const SSL_CIPHER *(*get_cipher) (unsigned ncipher);
-    long (*get_timeout) (void);
-    const struct ssl3_enc_method *ssl3_enc; /* Extra SSLv3/TLS stuff */
-    int (*ssl_version) (void);
-    long (*ssl_callback_ctrl) (SSL *s, int cb_id, void (*fp) (void));
-    long (*ssl_ctx_callback_ctrl) (SSL_CTX *s, int cb_id, void (*fp) (void));
+                               size_t *len);             /* ssl3_put_cipher_by_char() */
+    size_t (*ssl_pending) (const SSL *s);                /* ssl3_pending() */
+    int (*num_ciphers) (void);                           /* ssl3_num_ciphers() */
+    const SSL_CIPHER *(*get_cipher) (unsigned ncipher);  /* ssl3_get_cipher() */
+    long (*get_timeout) (void);                          /* tls1_default_timeout() */
+    const struct ssl3_enc_method *ssl3_enc; /* Extra SSLv3/TLS stuff */ /* &enc_data */
+    int (*ssl_version) (void);                           /* ssl_undefined_void_function() */
+    long (*ssl_callback_ctrl) (SSL *s, int cb_id, void (*fp) (void));         /* ssl3_callback_ctrl() */
+    long (*ssl_ctx_callback_ctrl) (SSL_CTX *s, int cb_id, void (*fp) (void)); /* ssl3_ctx_callback_ctrl() */
 };
 
 /*-
@@ -670,18 +670,19 @@ typedef struct raw_extension_st {
     unsigned int type;
 } RAW_EXTENSION;
 
+/* ClientHello消息 */
 typedef struct {
-    unsigned int isv2;
-    unsigned int legacy_version;
-    unsigned char random[SSL3_RANDOM_SIZE];
-    size_t session_id_len;
+    unsigned int isv2;           /* 是否未SSL2 */
+    unsigned int legacy_version; /* 客户端推荐的TLS版本 */
+    unsigned char random[SSL3_RANDOM_SIZE];  /* 客户端随机数 */
+    size_t session_id_len;                   /* 会话，以支持会话恢复 */
     unsigned char session_id[SSL_MAX_SSL_SESSION_ID_LENGTH];
     size_t dtls_cookie_len;
     unsigned char dtls_cookie[DTLS1_COOKIE_LENGTH];
-    PACKET ciphersuites;
-    size_t compressions_len;
+    PACKET ciphersuites;                     /* 客户端支持的加解密套件 */
+    size_t compressions_len;                 /* 客户端支持的压缩算法 */
     unsigned char compressions[MAX_COMPRESSIONS_SIZE];
-    PACKET extensions;
+    PACKET extensions;                       /* 拓展部分 */
     size_t pre_proc_exts_len;
     RAW_EXTENSION *pre_proc_exts;
 } CLIENTHELLO_MSG;
@@ -977,9 +978,9 @@ struct ssl_st {
      * protocol version (one of SSL2_VERSION, SSL3_VERSION, TLS1_VERSION,
      * DTLS1_VERSION)
      */
-    int version;                           /* TLS版本 */
+    int version;                           /* 协商决定的最终通信TLS版本 */
     /* SSLv3 */
-    const SSL_METHOD *method;              /* 对应TLS不同版本的API */
+    const SSL_METHOD *method;              /* 协商决定的最终通信API */
     /*
      * There are 2 BIO's even though they are normally both the same.  This
      * is so data can be read and written to different handlers
@@ -992,7 +993,7 @@ struct ssl_st {
      * is returned.  This is needed for non-blocking IO so we know what
      * request needs re-doing when in SSL_accept or SSL_connect
      */
-    int rwstate;
+    int rwstate;                           /* 暂存当前读、写状态，以便于非阻塞恢复 */
     int (*handshake_func) (SSL *);         /* SSL握手函数，根据->server角色决定执行函数, 
                                               ossl_statem_accept()/ossl_statem_connect() */
     /*
@@ -1018,8 +1019,9 @@ struct ssl_st {
     OSSL_STATEM statem;                    /* SSL协商状态机信息 */
     SSL_EARLY_DATA_STATE early_data_state;
     BUF_MEM *init_buf;          /* buffer used during init */
-    void *init_msg;             /* pointer to handshake message body, set by
-                                 * ssl3_get_message() */
+    void *init_msg;                        /* 当前待处理的消息体，
+                                              pointer to handshake message body, set by
+                                              ssl3_get_message() */
     size_t init_num;               /* amount read/written */
     size_t init_off;               /* amount read/written */
     struct ssl3_state_st *s3;   /* SSLv3 variables */
@@ -1122,12 +1124,12 @@ struct ssl_st {
     int min_proto_version;
     int max_proto_version;
     size_t max_cert_list;
-    int first_packet;
+    int first_packet;           /* 0/1, SSL会话上第一个握手报文 */
     /*
      * What was passed in ClientHello.legacy_version. Used for RSA pre-master
      * secret and SSLv3/TLS (<=1.2) rollback check
      */
-    int client_version;
+    int client_version;         /* 客户端请求的最终TLS版本号 */
     /*
      * If we're using more than one pipeline how should we divide the data
      * up between the pipes?
@@ -1217,7 +1219,7 @@ struct ssl_st {
     } ext;
 
     /* Parsed form of the ClientHello, kept around across early_cb calls. */
-    CLIENTHELLO_MSG *clienthello;
+    CLIENTHELLO_MSG *clienthello;      /* ClientHello消息解析结果 */
 
     /*-
      * no further mod of servername
@@ -1242,7 +1244,7 @@ struct ssl_st {
     /* Have we attempted to find/parse SCTs yet? */
     int scts_parsed;
 # endif
-    SSL_CTX *session_ctx;       /* initial ctx, used to store sessions */
+    SSL_CTX *session_ctx;       /* 存储会话，用于会话恢复；initial ctx, used to store sessions */
     /* What we'll do */
     STACK_OF(SRTP_PROTECTION_PROFILE) *srtp_profiles;
     /* What's been chosen */
@@ -1323,18 +1325,18 @@ typedef struct ssl3_state_st {
     int need_empty_fragments;
     int empty_fragment_done;
     /* used during startup, digest all incoming/outgoing packets */
-    BIO *handshake_buffer;
+    BIO *handshake_buffer;         /* 缓存finish以前的消息，用于计算finish摘要 */
     /*
      * When handshake digest is determined, buffer is hashed and
      * freed and MD_CTX for the required digest is stored here.
      */
-    EVP_MD_CTX *handshake_dgst;
+    EVP_MD_CTX *handshake_dgst;    /* 计算finish摘要的环境 */
     /*
      * Set whenever an expected ChangeCipherSpec message is processed.
      * Unset when the peer's Finished message is received.
      * Unexpected ChangeCipherSpec messages trigger a fatal alert.
      */
-    int change_cipher_spec;
+    int change_cipher_spec;        /* 是否处理了ChangeCipherSpec消息 */
     int warn_alert;
     int fatal_alert;
     /*
@@ -1354,13 +1356,13 @@ typedef struct ssl3_state_st {
     struct {
         /* actually only need to be 16+20 for SSLv3 and 12 for TLS */
         unsigned char finish_md[EVP_MAX_MD_SIZE * 2];
-        size_t finish_md_len;
+        size_t finish_md_len;      /**/
         unsigned char peer_finish_md[EVP_MAX_MD_SIZE * 2];
         size_t peer_finish_md_len;
-        size_t message_size;
-        int message_type;
+        size_t message_size;   /* 当前处理的消息长度 */
+        int message_type;      /* 当前处理的消息类型, SSL3_MT_CLIENT_HELLO */
         /* used to hold the new cipher we are going to use */
-        const SSL_CIPHER *new_cipher;
+        const SSL_CIPHER *new_cipher;   /* 最终选择的加解密套件 */
 # if !defined(OPENSSL_NO_EC) || !defined(OPENSSL_NO_DH)
         EVP_PKEY *pkey;         /* holds short lived DH/ECDH key */
 # endif
@@ -1383,7 +1385,7 @@ typedef struct ssl3_state_st {
 # endif
         int cert_request;
         /* Raw values of the cipher list from a client */
-        unsigned char *ciphers_raw;
+        unsigned char *ciphers_raw;  /* 保存客户端的套件列表 */
         size_t ciphers_rawlen;
         /* Temporary storage for premaster secret */
         unsigned char *pms;
@@ -1396,7 +1398,7 @@ typedef struct ssl3_state_st {
         /* Signature algorithm we actually use */
         const SIGALG_LOOKUP *sigalg;
         /* Pointer to certificate we use */
-        CERT_PKEY *cert;
+        CERT_PKEY *cert;             /* 使用的公钥算法 */
         /*
          * signature algorithms peer reports: e.g. supported signature
          * algorithms extension for server or as part of a certificate

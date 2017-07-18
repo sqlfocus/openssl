@@ -1100,7 +1100,7 @@ int ssl3_write_pending(SSL *s, int type, const unsigned char *buf, size_t len,
  *             here, anything else is handled by higher layers
  *     Application data protocol
  *             none of our business
- */
+ *//* 读取指定长度@param len的数据 */
 int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
                     size_t len, int peek, size_t *readbytes)
 {
@@ -1112,7 +1112,7 @@ int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
 
     rbuf = &s->rlayer.rbuf;
 
-    if (!SSL3_BUFFER_is_initialised(rbuf)) {
+    if (!SSL3_BUFFER_is_initialised(rbuf)) { /* 确保已创建读缓存 */
         /* Not initialized yet */
         if (!ssl3_setup_read_buffer(s))
             return -1;
@@ -1123,9 +1123,10 @@ int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
                                              && (type !=
                                                  SSL3_RT_APPLICATION_DATA))) {
         SSLerr(SSL_F_SSL3_READ_BYTES, ERR_R_INTERNAL_ERROR);
-        return -1;
+        return -1;                           /* 参数检测 */
     }
 
+    /* 情况1: 有已接收，但未处理的握手报文 */
     if ((type == SSL3_RT_HANDSHAKE) && (s->rlayer.handshake_fragment_len > 0))
         /* (partially) satisfy request from storage */
     {
@@ -1136,16 +1137,16 @@ int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
         /* peek == 0 */
         n = 0;
         while ((len > 0) && (s->rlayer.handshake_fragment_len > 0)) {
-            *dst++ = *src++;
+            *dst++ = *src++;                 /* 简单copy数据 */
             len--;
             s->rlayer.handshake_fragment_len--;
             n++;
         }
-        /* move any remaining fragment bytes: */
+        /* move any remaining fragment bytes:*//* 去除已消费的数据 */
         for (k = 0; k < s->rlayer.handshake_fragment_len; k++)
             s->rlayer.handshake_fragment[k] = *src++;
 
-        if (recvd_type != NULL)
+        if (recvd_type != NULL)              /* 设定返回值 */
             *recvd_type = SSL3_RT_HANDSHAKE;
 
         *readbytes = n;
@@ -1155,7 +1156,7 @@ int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
     /*
      * Now s->rlayer.handshake_fragment_len == 0 if type == SSL3_RT_HANDSHAKE.
      */
-
+    /* 情况2: 尚未启动握手协商，启动 */
     if (!ossl_statem_get_in_handshake(s) && SSL_in_init(s)) {
         /* type == SSL3_RT_APPLICATION_DATA */
         i = s->handshake_func(s);
@@ -1166,8 +1167,10 @@ int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
             return -1;
         }
     }
+
+    /* 情况3: 正常读取，并填充到缓存 */
  start:
-    s->rwstate = SSL_NOTHING;
+    s->rwstate = SSL_NOTHING;     /* 设置当前状态 */
 
     /*-
      * For each record 'i' up to |num_recs]
@@ -1181,12 +1184,12 @@ int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
 
     do {
         /* get new records if necessary */
-        if (num_recs == 0) {
+        if (num_recs == 0) {      /* 读取记录，并解密 */
             ret = ssl3_get_record(s);
             if (ret <= 0)
                 return ret;
             num_recs = RECORD_LAYER_get_numrpipes(&s->rlayer);
-            if (num_recs == 0) {
+            if (num_recs == 0) {  /* 读取失败 */
                 /* Shouldn't happen */
                 al = SSL_AD_INTERNAL_ERROR;
                 SSLerr(SSL_F_SSL3_READ_BYTES, ERR_R_INTERNAL_ERROR);
@@ -1196,25 +1199,25 @@ int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
         /* Skip over any records we have already read */
         for (curr_rec = 0;
              curr_rec < num_recs && SSL3_RECORD_is_read(&rr[curr_rec]);
-             curr_rec++) ;
+             curr_rec++) ;        /* 略过已处理的记录 */
         if (curr_rec == num_recs) {
             RECORD_LAYER_set_numrpipes(&s->rlayer, 0);
-            num_recs = 0;
+            num_recs = 0;         /* 如果都已经处理过，则重新读取 */
             curr_rec = 0;
         }
     } while (num_recs == 0);
-    rr = &rr[curr_rec];
+    rr = &rr[curr_rec];           /* 定位到待处理的记录 */
 
     /*
      * Reset the count of consecutive warning alerts if we've got a non-empty
      * record that isn't an alert.
-     */
+     */                           /* 遇到非空记录，重置连续告警记录计数 */
     if (SSL3_RECORD_get_type(rr) != SSL3_RT_ALERT
             && SSL3_RECORD_get_length(rr) != 0)
         s->rlayer.alert_count = 0;
 
     /* we now have a packet which can be read and processed */
-
+                                  /* 收到ChangeCipherSpec消息后，应该继续收到FINISH消息 */
     if (s->s3->change_cipher_spec /* set when we receive ChangeCipherSpec,
                                    * reset by ssl3_get_finished */
         && (SSL3_RECORD_get_type(rr) != SSL3_RT_HANDSHAKE)) {
@@ -1226,13 +1229,13 @@ int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
     /*
      * If the other end has shut down, throw anything we read away (even in
      * 'peek' mode)
-     */
+     */                           /* 对端关闭底层链路，丢弃所有读到的报文 */
     if (s->shutdown & SSL_RECEIVED_SHUTDOWN) {
         SSL3_RECORD_set_length(rr, 0);
         s->rwstate = SSL_NOTHING;
         return 0;
     }
-
+                                  /* 此记录为所需类型 或 协商过程中收到了ChangeCipherSpec消息 */
     if (type == SSL3_RECORD_get_type(rr)
         || (SSL3_RECORD_get_type(rr) == SSL3_RT_CHANGE_CIPHER_SPEC
             && type == SSL3_RT_HANDSHAKE && recvd_type != NULL
@@ -1245,15 +1248,15 @@ int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
         /*
          * make sure that we are not getting application data when we are
          * doing a handshake for the first time
-         */
+         */                       /* 协商过程收到了APP数据，报错 */
         if (SSL_in_init(s) && (type == SSL3_RT_APPLICATION_DATA) &&
             (s->enc_read_ctx == NULL)) {
             al = SSL_AD_UNEXPECTED_MESSAGE;
             SSLerr(SSL_F_SSL3_READ_BYTES, SSL_R_APP_DATA_IN_HANDSHAKE);
             goto f_err;
         }
-
-        if (type == SSL3_RT_HANDSHAKE
+                                  /* 尚有未处理的握手记录时，收到了ChangeCipherSpec消息 */
+        if (type == SSL3_RT_HANDSHAKE  /* <TAKECARE!!!>此消息应该在握手消息处理结束后 */
             && SSL3_RECORD_get_type(rr) == SSL3_RT_CHANGE_CIPHER_SPEC
             && s->rlayer.handshake_fragment_len > 0) {
             al = SSL_AD_UNEXPECTED_MESSAGE;
@@ -1261,14 +1264,14 @@ int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
             goto f_err;
         }
 
-        if (recvd_type != NULL)
+        if (recvd_type != NULL)   /* 设置返回置，记录类型 */
             *recvd_type = SSL3_RECORD_get_type(rr);
 
-        if (len == 0)
+        if (len == 0)             /* 调用者不要求数据，立即返回 */
             return 0;
 
         totalbytes = 0;
-        do {
+        do {                      /* copy返回的数据，并调整记录描述结构 */
             if (len - totalbytes > SSL3_RECORD_get_length(rr))
                 n = SSL3_RECORD_get_length(rr);
             else
@@ -1296,8 +1299,8 @@ int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
             }
             totalbytes += n;
         } while (type == SSL3_RT_APPLICATION_DATA && curr_rec < num_recs
-                 && totalbytes < len);
-        if (totalbytes == 0) {
+                 && totalbytes < len);  /* <TAKECARE!!!>APP数据允许返回多个记录 */
+        if (totalbytes == 0) {    /* 遇到空记录，重新读取 */
             /* We must have read empty records. Get more data */
             goto start;
         }
@@ -1306,9 +1309,10 @@ int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
             && SSL3_BUFFER_get_left(rbuf) == 0)
             ssl3_release_read_buffer(s);
         *readbytes = totalbytes;
-        return 1;
+        return 1;                 /* 返回 */
     }
 
+    /* 情况4: 遇到了特殊情况 */
     /*
      * If we get here, then type != rr->type; if we have a handshake message,
      * then it was unexpected (Hello Request or Client Hello) or invalid (we

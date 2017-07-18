@@ -361,7 +361,7 @@ struct evp_pkey_st {
     int type;            /* 类型, EVP_PKEY_RSA */
     int save_type;
     CRYPTO_REF_COUNT references;
-    const EVP_PKEY_ASN1_METHOD *ameth;  /* 算法API */
+    const EVP_PKEY_ASN1_METHOD *ameth;  /* 算法API, rsa_asn1_meths */
     ENGINE *engine;
     union {
         void *ptr;

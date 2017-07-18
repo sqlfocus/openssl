@@ -72,12 +72,13 @@ int tls_close_construct_packet(SSL *s, WPACKET *pkt, int htype)
     return 1;
 }
 
+/* 初始化TLS握手环境 */
 int tls_setup_handshake(SSL *s)
 {
-    if (!ssl3_init_finished_mac(s))
+    if (!ssl3_init_finished_mac(s))    /* 预留消息缓存，便于计算finish摘要 */
         return 0;
 
-    if (s->server) {
+    if (s->server) {                   /* 统计计数 */
         if (SSL_IS_FIRST_HANDSHAKE(s)) {
             s->ctx->stats.sess_accept++;
         } else if (!s->s3->send_connection_binding &&
@@ -104,9 +105,9 @@ int tls_setup_handshake(SSL *s)
 
         /* mark client_random uninitialized */
         memset(s->s3->client_random, 0, sizeof(s->s3->client_random));
-        s->hit = 0;
+        s->hit = 0;                    /* 会话恢复标志 */
 
-        s->s3->tmp.cert_req = 0;
+        s->s3->tmp.cert_req = 0;       /* 是否需要认证服务器 */
 
         if (SSL_IS_DTLS(s))
             s->statem.use_timer = 1;
@@ -995,10 +996,11 @@ WORK_STATE tls_finish_handshake(SSL *s, WORK_STATE wst, int clearbufs)
     if (!clearbufs)
         return WORK_FINISHED_CONTINUE;
 
-    ossl_statem_set_in_init(s, 0);
+    ossl_statem_set_in_init(s, 0);         /* 握手完成，退出 */
     return WORK_FINISHED_STOP;
 }
 
+/* 读取记录头，@param mt: 消息类型 */
 int tls_get_message_header(SSL *s, int *mt)
 {
     /* s->init_num < SSL3_HM_HEADER_LENGTH */
@@ -1009,15 +1011,16 @@ int tls_get_message_header(SSL *s, int *mt)
     p = (unsigned char *)s->init_buf->data;
 
     do {
+        /* 读取数据, ssl3_read_bytes() */
         while (s->init_num < SSL3_HM_HEADER_LENGTH) {
             i = s->method->ssl_read_bytes(s, SSL3_RT_HANDSHAKE, &recvd_type,
                                           &p[s->init_num],
                                           SSL3_HM_HEADER_LENGTH - s->init_num,
                                           0, &readbytes);
-            if (i <= 0) {
+            if (i <= 0) {          /* 非阻塞无数据或遇到错误，设置正处于读状态 */
                 s->rwstate = SSL_READING;
                 return 0;
-            }
+            }                      /* 遇到ChangeCipherSpec记录 */
             if (recvd_type == SSL3_RT_CHANGE_CIPHER_SPEC) {
                 /*
                  * A ChangeCipherSpec must be a single byte and may not occur
@@ -1042,6 +1045,7 @@ int tls_get_message_header(SSL *s, int *mt)
             s->init_num += readbytes;
         }
 
+        /* 客户端收到服务器发送的'Hello Request'消息 */
         skip_message = 0;
         if (!s->server)
             if (s->statem.hand_state != TLS_ST_OK
@@ -1064,9 +1068,12 @@ int tls_get_message_header(SSL *s, int *mt)
     } while (skip_message);
     /* s->init_num == SSL3_HM_HEADER_LENGTH */
 
+    /* 到达此处，已经去除了记录头，即4字节[proto(1):ver(2):length(2)] */
+    /* 通过参数返回，消息类型, SSL3_MT_CLIENT_HELLO */
     *mt = *p;
     s->s3->tmp.message_type = *(p++);
 
+    /* 初始化临时状态 */
     if (RECORD_LAYER_is_sslv2_record(&s->rlayer)) {
         /*
          * Only happens with SSLv3+ in an SSLv2 backward compatible
@@ -1082,7 +1089,7 @@ int tls_get_message_header(SSL *s, int *mt)
         s->init_msg = s->init_buf->data;
         s->init_num = SSL3_HM_HEADER_LENGTH;
     } else {
-        n2l3(p, l);
+        n2l3(p, l);     /* 计算消息长度 */
         /* BUF_MEM_grow takes an 'int' parameter */
         if (l > (INT_MAX - SSL3_HM_HEADER_LENGTH)) {
             al = SSL_AD_ILLEGAL_PARAMETER;
@@ -1092,7 +1099,7 @@ int tls_get_message_header(SSL *s, int *mt)
         s->s3->tmp.message_size = l;
 
         s->init_msg = s->init_buf->data + SSL3_HM_HEADER_LENGTH;
-        s->init_num = 0;
+        s->init_num = 0;/* 指向待处理的消息 */
     }
 
     return 1;
@@ -1101,24 +1108,27 @@ int tls_get_message_header(SSL *s, int *mt)
     return 0;
 }
 
+/* 读取待处理的消息体 */
 int tls_get_message_body(SSL *s, size_t *len)
 {
     size_t n, readbytes;
     unsigned char *p;
     int i;
 
+    /* 此消息无消息体 */
     if (s->s3->tmp.message_type == SSL3_MT_CHANGE_CIPHER_SPEC) {
         /* We've already read everything in */
         *len = (unsigned long)s->init_num;
         return 1;
     }
 
+    /* 读取消息的剩余部分 */
     p = s->init_msg;
     n = s->s3->tmp.message_size - s->init_num;
-    while (n > 0) {
+    while (n > 0) {   /* ssl3_read_bytes() */
         i = s->method->ssl_read_bytes(s, SSL3_RT_HANDSHAKE, NULL,
                                       &p[s->init_num], n, 0, &readbytes);
-        if (i <= 0) {
+        if (i <= 0) { /* 非阻塞无数据或遇到错误，设置当前状态并退出 */
             s->rwstate = SSL_READING;
             *len = 0;
             return 0;
@@ -1131,12 +1141,12 @@ int tls_get_message_body(SSL *s, size_t *len)
     /*
      * If receiving Finished, record MAC of prior handshake messages for
      * Finished verification.
-     */
+     *//* 收到FINISH消息 */
     if (*s->init_buf->data == SSL3_MT_FINISHED)
         ssl3_take_mac(s);
 #endif
 
-    /* Feed this message into MAC computation. */
+    /* 累计消息的MAC值，以等待finish消息发送；Feed this message into MAC computation. */
     if (RECORD_LAYER_is_sslv2_record(&s->rlayer)) {
         if (!ssl3_finish_mac(s, (unsigned char *)s->init_buf->data,
                              s->init_num)) {
@@ -1167,6 +1177,7 @@ int tls_get_message_body(SSL *s, size_t *len)
                             s->msg_callback_arg);
     }
 
+    /* 发送 */
     *len = s->init_num;
     return 1;
 }
@@ -1553,14 +1564,15 @@ int ssl_choose_server_version(SSL *s, CLIENTHELLO_MSG *hello, DOWNGRADE *dgrd)
     int disabled = 0;
     RAW_EXTENSION *suppversions;
 
+    /* 保存客户端请求的TLS版本号 */
     s->client_version = client_version;
 
     switch (server_version) {
-    default:
+    default:                      /* 服务器指定了具体版本号 */
         if (!SSL_IS_TLS13(s)) {
             if (version_cmp(s, client_version, s->version) < 0)
                 return SSL_R_WRONG_SSL_VERSION;
-            *dgrd = DOWNGRADE_NONE;
+            *dgrd = DOWNGRADE_NONE;   /* 服务器端版本低, 设置降级标识 */
             /*
              * If this SSL handle is not from a version flexible method we don't
              * (and never did) check min/max FIPS or Suite B constraints.  Hope
@@ -1574,7 +1586,7 @@ int ssl_choose_server_version(SSL *s, CLIENTHELLO_MSG *hello, DOWNGRADE *dgrd)
          * Fall through if we are TLSv1.3 already (this means we must be after
          * a HelloRetryRequest
          */
-    case TLS_ANY_VERSION:
+    case TLS_ANY_VERSION:         /* 服务器未指定具体版本 */
         table = tls_version_table;
         break;
     case DTLS_ANY_VERSION:
@@ -1582,8 +1594,8 @@ int ssl_choose_server_version(SSL *s, CLIENTHELLO_MSG *hello, DOWNGRADE *dgrd)
         break;
     }
 
+    /* 通过拓展项指定了更高级别版本??? */
     suppversions = &hello->pre_proc_exts[TLSEXT_IDX_supported_versions];
-
     if (suppversions->present && !SSL_IS_DTLS(s)) {
         unsigned int candidate_vers = 0;
         unsigned int best_vers = 0;
@@ -1648,24 +1660,24 @@ int ssl_choose_server_version(SSL *s, CLIENTHELLO_MSG *hello, DOWNGRADE *dgrd)
     /*
      * If the supported versions extension isn't present, then the highest
      * version we can negotiate is TLSv1.2
-     */
+     *//* 未指定拓展选项，最高版本将是TLS v1.2*/
     if (version_cmp(s, client_version, TLS1_3_VERSION) >= 0)
         client_version = TLS1_2_VERSION;
 
     /*
      * No supported versions extension, so we just use the version supplied in
      * the ClientHello.
-     */
+     *//* 未指定拓展项，使用ClientHello消息中指定的版本 */
     for (vent = table; vent->version != 0; ++vent) {
         const SSL_METHOD *method;
 
         if (vent->smeth == NULL ||
             version_cmp(s, client_version, vent->version) < 0)
             continue;
-        method = vent->smeth();
+        method = vent->smeth();            /* 获取对应版本的API */
         if (ssl_method_error(s, method) == 0) {
             check_for_downgrade(s, vent->version, dgrd);
-            s->version = vent->version;
+            s->version = vent->version;    /* 初始化SSL对象 */
             s->method = method;
             return 0;
         }

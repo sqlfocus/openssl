@@ -2298,7 +2298,8 @@ int tls_choose_sigalg(SSL *s, int *al)
         }
     } else {
         if (s->server) {
-            /* Find index corresponding to ciphersuite */
+            /* 查找套件对应的公钥类型索引，
+               Find index corresponding to ciphersuite */
             idx = ssl_cipher_get_cert_index(s->s3->tmp.new_cipher);
             /* If no certificate for ciphersuite return */
             if (idx == -1)
@@ -2417,6 +2418,8 @@ int tls_choose_sigalg(SSL *s, int *al)
         }
         return 0;
     }
+    
+    /* 保存结果 */
     s->s3->tmp.cert = &s->cert->pkeys[idx];
     s->cert->key = s->s3->tmp.cert;
     s->s3->tmp.sigalg = lu;

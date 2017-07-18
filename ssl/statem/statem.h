@@ -80,16 +80,16 @@ typedef enum {
  *****************************************************************************/
 
 struct ossl_statem_st {
-    MSG_FLOW_STATE state;
-    WRITE_STATE write_state;
+    MSG_FLOW_STATE state;       /* 读写状态机 */
+    WRITE_STATE write_state;    /* 写子状态机*/
     WORK_STATE write_state_work;
-    READ_STATE read_state;
+    READ_STATE read_state;      /* 读子状态机*/
     WORK_STATE read_state_work;
-    OSSL_HANDSHAKE_STATE hand_state;
+    OSSL_HANDSHAKE_STATE hand_state;    /* 对应当前报文的处理状态 */
     /* The handshake state requested by an API call (e.g. HelloRequest) */
-    OSSL_HANDSHAKE_STATE request_state;
+    OSSL_HANDSHAKE_STATE request_state; /* */
     int in_init;                /* 正初始化ing */
-    int read_state_first_init;
+    int read_state_first_init;  /* 0/1, 是否首次协商? */
     /* true when we are actually in SSL_accept() or SSL_connect() */
     int in_handshake;           /* 正握手协商ing */
     /*
