@@ -10,6 +10,10 @@
  - crypto                 :: 加解密算法库
  - ssl                    :: TLS协议库
 
+* DER编码
+http://blog.csdn.net/sever2012/article/details/7698297
+http://blog.csdn.net/baidu_36649389/article/details/53538223
+
 * PEM格式
 参考RFC1421-1424
 #+BEGIN_EXAMPLE
@@ -101,10 +105,12 @@ wuhSh8TMHAsgXql4Ba3AoDXVbPbzHBo8N4CfgmSxoplnj6/crn5g1ofLAtzokq8E
 #+END_EXAMPLE
 
 * X509格式
-ab
+rfc 5280
 
 * RSA算法原理
 [[file:RSA%E7%AE%97%E6%B3%95%E5%8E%9F%E7%90%86.pdf][file:RSA算法原理.pdf]]
+http://blog.csdn.net/dbs1215/article/details/48953589
+rfc 8017
 
 * openssl s_client
 模拟客户端, s_client_main() in ~/apps/s_client.c
@@ -131,11 +137,18 @@ ab
 #+END_EXAMPLE
 
 * 名词解释
+ - BER, Basic Encoding Rule
+ - DH, Diffie-Hellman
  - DTLS, Datagram Transport Layer Security, 即数据包传输层安全性协议
     : TLS不能用来保证UDP上传输的数据的安全，因此Datagram TLS试图在现存的TLS
     : 协议架构上提出扩展，使之支持UDP，即成为TLS的支持数据报传输的版本
     :
     : DTLS 1.0 基于 TLS 1.1, DTLS 1.2 基于TLS 1.2
+ - DSA, Digital Signature Algorithm
+ - ECDH, Elliptic Curve Diffie-Hellman
+ - ECDSA, Elliptic Curve Digital Signature Algorithm
+ - KEA, Key Encryption Algorithm
+ - RSA, Rivest-Shamir-Adelman
  - PEM, privacy-enhanced mail
     : a de facto file format for storing and sending cryptography keys, 
     : certificates, and other data
