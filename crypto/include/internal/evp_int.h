@@ -93,8 +93,8 @@ extern const EVP_PKEY_METHOD siphash_pkey_meth;
 
 /* 摘要算法套件信息结构 */
 struct evp_md_st {
-    int type;           /* 摘要类型，摘要算法NID */
-    int pkey_type;      /* 公钥类型，一般为签名算法NID */
+    int type;           /* 摘要算法NID */
+    int pkey_type;      /* 签名算法NID */
     int md_size;        /* 摘要值大小 */
     unsigned long flags;
     int (*init) (EVP_MD_CTX *ctx);
@@ -108,7 +108,7 @@ struct evp_md_st {
     int (*md_ctrl) (EVP_MD_CTX *ctx, int cmd, int p1, void *p2);
 } /* EVP_MD */ ;
 
-/* 对称加密算法套件信息结构 */
+/* 对称加密算法信息结构 */
 struct evp_cipher_st {
     int nid;           /* 对称算法nid */
     int block_size;    /* 对称算法每次加解密的字节数 */

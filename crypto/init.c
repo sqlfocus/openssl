@@ -147,7 +147,7 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_load_crypto_strings)
     return ret;
 }
 
-/* 加载对称加密算法套件 */
+/* 加载对称加密算法，如DES */
 static CRYPTO_ONCE add_all_ciphers = CRYPTO_ONCE_STATIC_INIT;
 DEFINE_RUN_ONCE_STATIC(ossl_init_add_all_ciphers)
 {
@@ -165,6 +165,7 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_add_all_ciphers)
     return 1;
 }
 
+/* 加载摘要算法，如MD5等 */
 static CRYPTO_ONCE add_all_digests = CRYPTO_ONCE_STATIC_INIT;
 DEFINE_RUN_ONCE_STATIC(ossl_init_add_all_digests)
 {
@@ -532,7 +533,7 @@ int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)
             && !RUN_ONCE(&add_all_ciphers, ossl_init_no_add_algs))
         return 0;
 
-    /* 加载对称加密套件 */
+    /* 加载对称加密算法，如DES */
     if ((opts & OPENSSL_INIT_ADD_ALL_CIPHERS)
             && !RUN_ONCE(&add_all_ciphers, ossl_init_add_all_ciphers))
         return 0;
@@ -541,6 +542,7 @@ int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)
             && !RUN_ONCE(&add_all_digests, ossl_init_no_add_algs))
         return 0;
 
+    /* 加载摘要算法，如MD5等 */
     if ((opts & OPENSSL_INIT_ADD_ALL_DIGESTS)
             && !RUN_ONCE(&add_all_digests, ossl_init_add_all_digests))
         return 0;
@@ -608,6 +610,7 @@ int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)
 #endif
 
 #ifndef OPENSSL_NO_COMP
+    /* 加载压缩库 */
     if ((opts & OPENSSL_INIT_ZLIB)
             && !RUN_ONCE(&zlib, ossl_init_zlib))
         return 0;

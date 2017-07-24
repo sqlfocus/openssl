@@ -77,7 +77,7 @@ typedef struct {
     int nid;
 } ssl_cipher_table;
 
-/* Table of NIDs for each cipher */
+/* 内置支持的对称加密算法表，Table of NIDs for each cipher */
 static const ssl_cipher_table ssl_cipher_table_cipher[SSL_ENC_NUM_IDX] = {
     {SSL_DES, NID_des_cbc},     /* SSL_ENC_DES_IDX 0 */
     {SSL_3DES, NID_des_ede3_cbc}, /* SSL_ENC_3DES_IDX 1 */
@@ -100,7 +100,7 @@ static const ssl_cipher_table ssl_cipher_table_cipher[SSL_ENC_NUM_IDX] = {
     {SSL_eGOST2814789CNT12, NID_gost89_cnt_12}, /* SSL_ENC_GOST8912_IDX */
     {SSL_CHACHA20POLY1305, NID_chacha20_poly1305},
 };
-
+/* 与 ssl_cipher_table_cipher[] 索引顺序相同的对成加密算法的实现的数据结构 */
 static const EVP_CIPHER *ssl_cipher_methods[SSL_ENC_NUM_IDX];
 
 #define SSL_COMP_NULL_IDX       0
@@ -120,7 +120,7 @@ static CRYPTO_ONCE ssl_load_builtin_comp_once = CRYPTO_ONCE_STATIC_INIT;
 
 #define SSL_MD_NUM_IDX  SSL_MAX_DIGEST
 
-/* NB: make sure indices in this table matches values above */
+/* 内置支持的摘要算法表，NB: make sure indices in this table matches values above */
 static const ssl_cipher_table ssl_cipher_table_mac[SSL_MD_NUM_IDX] = {
     {SSL_MD5, NID_md5},         /* SSL_MD_MD5_IDX 0 */
     {SSL_SHA1, NID_sha1},       /* SSL_MD_SHA1_IDX 1 */
@@ -135,7 +135,7 @@ static const ssl_cipher_table ssl_cipher_table_mac[SSL_MD_NUM_IDX] = {
     {0, NID_sha224},            /* SSL_MD_SHA224_IDX 10 */
     {0, NID_sha512}             /* SSL_MD_SHA512_IDX 11 */
 };
-
+/* 与 ssl_cipher_table_mac[] 索引一致的摘要算法的实现的数据结构 */
 static const EVP_MD *ssl_digest_methods[SSL_MD_NUM_IDX] = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 };
@@ -365,19 +365,23 @@ static int get_optional_pkey_id(const char *pkey_name)
 
 #endif
 
-/* masks of disabled algorithms */
+/* 不支持的算法掩码，masks of disabled algorithms */
 static uint32_t disabled_enc_mask;
 static uint32_t disabled_mac_mask;
 static uint32_t disabled_mkey_mask;
 static uint32_t disabled_auth_mask;
 
+/* 加载加密套件 ssl3_ciphers[] ，被协商报文使用 */
 void ssl_load_ciphers(void)
 {
     size_t i;
     const ssl_cipher_table *t;
 
+    /* 排序 ssl3_ciphers[], struct ssl_cipher_st->id */
     disabled_enc_mask = 0;
     ssl_sort_cipher_list();
+
+    /* 初始化 ssl_cipher_methods[], 内置支持的对称加密算法表，索引 SSL_ENC_DES_IDX~SSL_ENC_NUM_IDX */
     for (i = 0, t = ssl_cipher_table_cipher; i < SSL_ENC_NUM_IDX; i++, t++) {
         if (t->nid == NID_undef) {
             ssl_cipher_methods[i] = NULL;
@@ -388,6 +392,7 @@ void ssl_load_ciphers(void)
                 disabled_enc_mask |= t->mask;
         }
     }
+    /* 初始化 ssl_digest_methods[], 内置支持的摘要算法表 */
     disabled_mac_mask = 0;
     for (i = 0, t = ssl_cipher_table_mac; i < SSL_MD_NUM_IDX; i++, t++) {
         const EVP_MD *md = EVP_get_digestbynid(t->nid);
@@ -407,6 +412,7 @@ void ssl_load_ciphers(void)
     disabled_mkey_mask = 0;
     disabled_auth_mask = 0;
 
+    /* 根据宏定义初始化未使能算法掩码 */
 #ifdef OPENSSL_NO_RSA
     disabled_mkey_mask |= SSL_kRSA | SSL_kRSAPSK;
     disabled_auth_mask |= SSL_aRSA;
@@ -970,6 +976,9 @@ static int ssl_cipher_strength_sort(CIPHER_ORDER **head_p,
     return (1);
 }
 
+/* 处理用户指定的算法套件字符串，如
+   "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
+   "ALL:!COMPLEMENTOFDEFAULT:!eNULL" */
 static int ssl_cipher_process_rulestr(const char *rule_str,
                                       CIPHER_ORDER **head_p,
                                       CIPHER_ORDER **tail_p,
@@ -987,6 +996,7 @@ static int ssl_cipher_process_rulestr(const char *rule_str,
     for (;;) {
         ch = *l;
 
+        /* 提取特殊字符 */
         if (ch == '\0')
             break;              /* done */
         if (ch == '-') {
@@ -1010,6 +1020,7 @@ static int ssl_cipher_process_rulestr(const char *rule_str,
             continue;
         }
 
+        /* 提取字符串，即配置项 */
         alg_mkey = 0;
         alg_auth = 0;
         alg_enc = 0;
@@ -1183,7 +1194,7 @@ static int ssl_cipher_process_rulestr(const char *rule_str,
 
         /*
          * Ok, we have the rule, now apply it
-         */
+         *//* 特殊处理，即以@开头的配置项 */
         if (rule == CIPHER_SPECIAL) { /* special command */
             ok = 0;
             if ((buflen == 8) && strncmp(buf, "STRENGTH", 8) == 0)
@@ -1325,12 +1336,13 @@ STACK_OF(SSL_CIPHER) *ssl_create_cipher_list(const SSL_METHOD *ssl_method, STACK
         return (NULL);          /* Failure */
     }
 
+    /*** 获取 ssl3_ciphers[] 使能的套件，存储到局部链表 co_list ***/
     ssl_cipher_collect_ciphers(ssl_method, num_of_ciphers,
                                disabled_mkey, disabled_auth, disabled_enc,
                                disabled_mac, co_list, &head, &tail);
 
     /* Now arrange all ciphers by preference. */
-
+    /*** 按照指定的规则排序，以使得协商过程中选择的算法最安全 ***/
     /*
      * Everything else being equal, prefer ephemeral ECDH over other key
      * exchange mechanisms.
@@ -1460,6 +1472,7 @@ STACK_OF(SSL_CIPHER) *ssl_create_cipher_list(const SSL_METHOD *ssl_method, STACK
             rule_p++;
     }
 
+    /*** 处理套件选项 ***/
     if (ok && (strlen(rule_p) > 0))
         ok = ssl_cipher_process_rulestr(rule_p, &head, &tail, ca_list, c);
 
@@ -1473,7 +1486,7 @@ STACK_OF(SSL_CIPHER) *ssl_create_cipher_list(const SSL_METHOD *ssl_method, STACK
     /*
      * Allocate new "cipherstack" for the result, return with error
      * if we cannot get one.
-     */
+     *//*** 分配内存，存储处理后的算法套件 ***/
     if ((cipherstack = sk_SSL_CIPHER_new_null()) == NULL) {
         OPENSSL_free(co_list);
         return (NULL);
@@ -1506,7 +1519,7 @@ STACK_OF(SSL_CIPHER) *ssl_create_cipher_list(const SSL_METHOD *ssl_method, STACK
     *cipher_list = cipherstack;
     if (*cipher_list_by_id != NULL)
         sk_SSL_CIPHER_free(*cipher_list_by_id);
-    *cipher_list_by_id = tmp_cipher_list;
+    *cipher_list_by_id = tmp_cipher_list;       /* 依据ID排序 */
     (void)sk_SSL_CIPHER_set_cmp_func(*cipher_list_by_id, ssl_cipher_ptr_id_cmp);
 
     sk_SSL_CIPHER_sort(*cipher_list_by_id);

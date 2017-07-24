@@ -114,9 +114,6 @@ rfc 5280
 http://blog.csdn.net/dbs1215/article/details/48953589
 rfc 8017
 
-** rsa
-
-
 * 对称加密
 ** 类型
  - block ciphers
@@ -285,6 +282,33 @@ const EVP_CIPHER *EVP_des_ecb(void) { return &des_ecb; }
       -state_machine(,1)
 #+END_EXAMPLE
 
+* SSL_CTX_new()
+#+BEGIN_EXAMPLE
+-SSL_CTX_new()                              ~/ssl/ssl_lib.c
+  -OPENSSL_init_ssl()                       ~/ssl/ssl_init.c
+    -OPENSSL_init_crypto()
+      -ossl_init_add_all_ciphers()          加载对称加密算法，~/crypto/init.c
+      -ossl_init_add_all_digests()          加载摘要算法，~/crypto/init.c
+      -ossl_init_config()                   加载配置，~/crypto/init.c
+    -ossl_init_ssl_base()
+      -SSL_COMP_get_compression_methods()   加载压缩算法，~/ssl/ssl_ciph.c
+      -ssl_load_ciphers()                   排序加密套件，初始化内置对称算法、摘要算法表，~/ssl/ssl_ciph.c
+    -ossl_init_load_ssl_strings()
+      -ERR_load_SSL_strings()               加载调试信息，~/ssl/ssl_init.c
+  -ssl_create_cipher_list()                 加载支持的加密套件，~/ssl/ssl_ciph.c
+#+END_EXAMPLE
+
+* 全局变量
+ - ssl3_ciphers[]
+   : ~/ssl/s3_lib.c
+   : 支持的算法套件, 如ECDHE-ECDSA-ES128-GCM-SHA256A
+ - ssl_cipher_methods[]
+   : ~/ssl/ssl_ciph.c
+   : 内置实现的对称算法表，索引SSL_ENC_DES_IDX~SSL_ENC_NUM_IDX
+ - ssl_digest_methods[]
+   : ~/ssl/ssl_ciph.c
+   : 内置实现的摘要算法表，索引SSL_MD_MD5_IDX~SSL_MD_NUM_IDX/SSL_MAX_DIGEST
+
 * 名词解释
  - BER, Basic Encoding Rule
  - DH, Diffie-Hellman
@@ -306,12 +330,6 @@ const EVP_CIPHER *EVP_des_ecb(void) { return &des_ecb; }
  - <<SSL & TLS>>
  - <<SSL & TLS Essential>>
  - <<network security with openssl>>
-
-
-
-
-
-
 
 
 

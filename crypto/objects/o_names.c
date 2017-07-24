@@ -41,7 +41,7 @@ static int obj_strcmp(const char *a, const char *b)
 /*
  * I use the ex_data stuff to manage the identifiers for the obj_name_types
  * that applications may define.  I only really use the free function field.
- *//* 存放openssl内部的对象，如对称加密算法、hash算法等 */
+ *//* 存放openssl内部的对象，如对称加密算法、hash算法等; 以名称为键 */
 static LHASH_OF(OBJ_NAME) *names_lh = NULL;
 static int names_type_num = OBJ_NAME_TYPE_NUM;
 

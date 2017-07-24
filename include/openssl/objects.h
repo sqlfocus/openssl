@@ -15,7 +15,7 @@
 # include <openssl/asn1.h>
 
 # define OBJ_NAME_TYPE_UNDEF             0x00
-# define OBJ_NAME_TYPE_MD_METH           0x01
+# define OBJ_NAME_TYPE_MD_METH           0x01   /* 摘要散列算法 */
 # define OBJ_NAME_TYPE_CIPHER_METH       0x02   /* 对称加密算法 */
 # define OBJ_NAME_TYPE_PKEY_METH         0x03
 # define OBJ_NAME_TYPE_COMP_METH         0x04

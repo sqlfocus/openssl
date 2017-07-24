@@ -646,7 +646,7 @@ SSL *SSL_new(SSL_CTX *ctx)
 
     s->key_update = SSL_KEY_UPDATE_NONE;
 
-    if (!s->method->ssl_new(s))     /* 初始化 */
+    if (!s->method->ssl_new(s))     /* 初始化, tls1_new()*/
         goto err;
 
     s->server = (ctx->method->ssl_accept == ssl_undefined_function) ? 0 : 1;
@@ -2290,7 +2290,7 @@ STACK_OF(SSL_CIPHER) *SSL_CTX_get_ciphers(const SSL_CTX *ctx)
     return NULL;
 }
 
-/** specify the ciphers to be used by default by the SSL_CTX */
+/** 指定SSL环境使用的算法套件，specify the ciphers to be used by default by the SSL_CTX */
 int SSL_CTX_set_cipher_list(SSL_CTX *ctx, const char *str)
 {
     STACK_OF(SSL_CIPHER) *sk;
@@ -2637,7 +2637,7 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *meth)
         return (NULL);
     }
 
-    /* 加载错误信息所需的字符串信息 */
+    /* 加载对称加密算法、摘要算法、错误调试信息等 */
     if (!OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL))
         return NULL;
 
@@ -2682,6 +2682,7 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *meth)
     if (ret->ctlog_store == NULL)
         goto err;
 #endif
+    /* 初始化支持的加密套件，取自 ssl3_ciphers[] */
     if (!ssl_create_cipher_list(ret->method,
                                 &ret->cipher_list, &ret->cipher_list_by_id,
                                 SSL_DEFAULT_CIPHER_LIST, ret->cert)

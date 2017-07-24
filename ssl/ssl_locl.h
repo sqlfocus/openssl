@@ -425,9 +425,9 @@
 # define TLS_CIPHER_LEN 2
 /* used to hold info on the particular ciphers used */
 struct ssl_cipher_st {
-    uint32_t valid;
-    const char *name;           /* text name */
-    uint32_t id;                /* id, 4 bytes, first is version */
+    uint32_t valid;             /* 是否使能 */
+    const char *name;           /* 名称，text name */
+    uint32_t id;                /* ID, 4 bytes, first is version */
     /*
      * changed in 1.0.0: these four used to be portions of a single value
      * 'algorithms'
@@ -695,9 +695,8 @@ DEFINE_LHASH_OF(X509_NAME);
 
 struct ssl_ctx_st {
     const SSL_METHOD *method;                /* 特定TLS版本的API，参考 IMPLEMENT_tls_meth_func() */
-    STACK_OF(SSL_CIPHER) *cipher_list;
-    /* same as above but sorted for lookup */
-    STACK_OF(SSL_CIPHER) *cipher_list_by_id;
+    STACK_OF(SSL_CIPHER) *cipher_list;       /* 支持的算法套件，选自 ssl3_ciphers[] */
+    STACK_OF(SSL_CIPHER) *cipher_list_by_id; /* ->cipher_list的排序结果 */
     struct x509_store_st /* X509_STORE */ *cert_store;   /* 存储客户端信任的CA证书、CRL吊销证书，以验证服务器端是否可信任 */
     LHASH_OF(SSL_SESSION) *sessions;         /* 存储会话，用于会话恢复 */
     /*

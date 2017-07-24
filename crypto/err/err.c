@@ -131,7 +131,7 @@ static ERR_STRING_DATA *int_err_get_item(const ERR_STRING_DATA *);
 /*
  * The internal state
  */
-
+/* 存放错误调试信息 */
 static LHASH_OF(ERR_STRING_DATA) *int_error_hash = NULL;
 static int int_err_library_number = ERR_LIB_USER;
 

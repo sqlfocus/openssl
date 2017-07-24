@@ -75,22 +75,23 @@ const unsigned char tls12downgrade[] = {
  *      SRP (within that: RSA EC PSK)
  *      Cipher families: Chacha/poly, Camellia, Gost, IDEA, SEED
  *      Weak ciphers
- */
+ *//* SSL3支持的算法套件 */
+/* typedef struct ssl_cipher_st SSL_CIPHER; */
 static SSL_CIPHER ssl3_ciphers[] = {
     {
-     1,
-     SSL3_TXT_RSA_NULL_MD5,
-     SSL3_CK_RSA_NULL_MD5,
-     SSL_kRSA,
-     SSL_aRSA,
-     SSL_eNULL,
-     SSL_MD5,
-     SSL3_VERSION, TLS1_2_VERSION,
-     DTLS1_BAD_VER, DTLS1_2_VERSION,
-     SSL_STRONG_NONE,
-     SSL_HANDSHAKE_MAC_DEFAULT | TLS1_PRF,
-     0,
-     0,
+        1,                        /* ->valid */
+        SSL3_TXT_RSA_NULL_MD5,    /* ->name */
+        SSL3_CK_RSA_NULL_MD5,     /* ->id */
+        SSL_kRSA,                 /* ->algorithm_mkey, 密钥磋商算法 */
+        SSL_aRSA,                 /* ->algorithm_auth, 服务器认证算法 */
+        SSL_eNULL,                /* ->algorithm_enc, 对称加密算法 */
+        SSL_MD5,                  /* ->algorithm_mac, 完整性校验，防窜改 */
+        SSL3_VERSION, TLS1_2_VERSION,         /* ->min_tls, ->max_tls */
+        DTLS1_BAD_VER, DTLS1_2_VERSION,       /* ->min_dtls, ->max_dtls */
+        SSL_STRONG_NONE,                      /* ->algo_strength */
+        SSL_HANDSHAKE_MAC_DEFAULT | TLS1_PRF, /* ->algorithm2 */
+        0,     /* ->strength_bits */
+        0,     /* ->alg_bits */
      },
     {
      1,

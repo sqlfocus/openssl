@@ -863,10 +863,10 @@ static ERR_STRING_DATA SSL_str_reasons[] = {
 int ERR_load_SSL_strings(void)
 {
 #ifndef OPENSSL_NO_ERR
-
+    /* 如果错误信息未加载，则加载到 int_error_hash 哈希表 */
     if (ERR_func_error_string(SSL_str_functs[0].error) == NULL) {
-        ERR_load_strings(0, SSL_str_functs);
-        ERR_load_strings(0, SSL_str_reasons);
+        ERR_load_strings(0, SSL_str_functs);  /* 加载函数信息 */
+        ERR_load_strings(0, SSL_str_reasons); /* 加载错误信息 */
     }
 #endif
     return 1;

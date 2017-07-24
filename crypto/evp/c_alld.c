@@ -20,7 +20,7 @@ void openssl_add_all_digests_int(void)
     EVP_add_digest(EVP_md4());
 #endif
 #ifndef OPENSSL_NO_MD5
-    EVP_add_digest(EVP_md5());
+    EVP_add_digest(EVP_md5());      /* md5_md */
     EVP_add_digest_alias(SN_md5, "ssl3-md5");
     EVP_add_digest(EVP_md5_sha1());
 #endif

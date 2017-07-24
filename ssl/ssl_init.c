@@ -20,6 +20,7 @@ static int stopped;
 
 static void ssl_library_stop(void);
 
+/* 基础初始化，包括基本的对称算法表、摘要算法表等 */
 static CRYPTO_ONCE ssl_base = CRYPTO_ONCE_STATIC_INIT;
 static int ssl_base_inited = 0;
 DEFINE_RUN_ONCE_STATIC(ossl_init_ssl_base)
@@ -92,16 +93,17 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_ssl_base)
     /*
      * This will initialise the built-in compression algorithms. The value
      * returned is a STACK_OF(SSL_COMP), but that can be discarded safely
-     */
+     *//* 加载内置压缩算法 */
     SSL_COMP_get_compression_methods();
 #endif
-    /* initialize cipher/digest methods table */
+    /* 排序加密套件表，并初始化对称算法、摘要算法表，initialize cipher/digest methods table */
     ssl_load_ciphers();
 
 #ifdef OPENSSL_INIT_DEBUG
     fprintf(stderr, "OPENSSL_INIT: ossl_init_ssl_base: "
             "SSL_add_ssl_module()\n");
 #endif
+    /* */
     SSL_add_ssl_module();
     /*
      * We ignore an error return here. Not much we can do - but not that bad
@@ -112,6 +114,7 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_ssl_base)
     return 1;
 }
 
+/* 加载错误调试信息到 int_error_hash 哈希表 */
 static CRYPTO_ONCE ssl_strings = CRYPTO_ONCE_STATIC_INIT;
 static int ssl_strings_inited = 0;
 DEFINE_RUN_ONCE_STATIC(ossl_init_load_ssl_strings)
@@ -191,17 +194,21 @@ int OPENSSL_init_ssl(uint64_t opts, const OPENSSL_INIT_SETTINGS * settings)
         return 0;
     }
 
+    /* 加载对称加密算法、摘要算法 */
     if (!OPENSSL_init_crypto(opts | OPENSSL_INIT_ADD_ALL_CIPHERS
                              | OPENSSL_INIT_ADD_ALL_DIGESTS, settings))
         return 0;
 
+    /* 初始化内置的对称算法表、摘要算法表 */
     if (!RUN_ONCE(&ssl_base, ossl_init_ssl_base))
         return 0;
 
+    /* 不加载错误调试信息 */
     if ((opts & OPENSSL_INIT_NO_LOAD_SSL_STRINGS)
         && !RUN_ONCE(&ssl_strings, ossl_init_no_load_ssl_strings))
         return 0;
 
+    /* 加载错误调试信息 */
     if ((opts & OPENSSL_INIT_LOAD_SSL_STRINGS)
         && !RUN_ONCE(&ssl_strings, ossl_init_load_ssl_strings))
         return 0;
