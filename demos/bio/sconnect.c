@@ -12,7 +12,8 @@
  * It is actually using non-blocking IO but in a very simple manner
  * sconnect host:port - it does a 'GET / HTTP/1.0'
  *
- * cc -I../../include sconnect.c -L../.. -lssl -lcrypto
+ *指定编译方式
+ * gcc -I../../include sconnect.c -L../.. -lssl -lcrypto
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,7 @@
 #include <openssl/ssl.h>
 
 #define HOSTPORT "localhost:4433"
-#define CAFILE "root.pem"
+#define CAFILE "root.pem"          /* 验证证书链需要用到的信任证书，实际中不一定是根证书 */
 
 extern int errno;
 
@@ -41,7 +42,7 @@ char *argv[];
     BIO *ssl_bio;
     int i, len, off, ret = 1;
 
-    if (argc > 1)
+    if (argc > 1)                 /* 接受两个参数，1st---'host:port'; 2st---信任CA证书 */
         hostport = argv[1];
     if (argc > 2)
         CAfile = argv[2];
@@ -55,17 +56,18 @@ char *argv[];
     sock_init();
 #endif
 
+    /* 构建SSL环境 */
     ssl_ctx = SSL_CTX_new(TLS_client_method());
 
-    /* Enable trust chain verification */
+    /* 加载信任CA，并设定验证对端身分的标识；Enable trust chain verification */
     SSL_CTX_set_verify(ssl_ctx, SSL_VERIFY_PEER, NULL);
     SSL_CTX_load_verify_locations(ssl_ctx, CAfile, NULL);
 
-    /* Lets make a SSL structure */
+    /* 构建SSL对象，Lets make a SSL structure */
     ssl = SSL_new(ssl_ctx);
     SSL_set_connect_state(ssl);
 
-    /* Enable peername verification */
+    /* 设定服务器名或IP，Enable peername verification */
     if (SSL_set1_host(ssl, hostname) <= 0)
         goto err;
 
@@ -73,7 +75,7 @@ char *argv[];
     ssl_bio = BIO_new(BIO_f_ssl());
     BIO_set_ssl(ssl_bio, ssl, BIO_CLOSE);
 
-    /* Lets use a connect BIO under the SSL BIO */
+    /* 构建Socket BIO用于连接服务器，Lets use a connect BIO under the SSL BIO */
     out = BIO_new(BIO_s_connect());
     BIO_set_conn_hostname(out, hostport);
     BIO_set_nbio(out, 1);

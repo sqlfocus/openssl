@@ -978,6 +978,7 @@ static const unsigned char so[6900] = {
     0x2A,0x83,0x1A,0x8C,0x9A,0x6E,0x01,0x01,0x0F,  /* [ 6890] OBJ_aria_256_ctr */
 };
 
+/* openssl内部对象的NID与short name、long name的映射关系 */
 #define NUM_NID 1086
 static const ASN1_OBJECT nid_objs[NUM_NID] = {
     {"UNDEF", "undefined", NID_undef},

@@ -45,7 +45,7 @@ static int by_file_ctrl(X509_LOOKUP *ctx, int cmd, const char *argp,
     char *file;
 
     switch (cmd) {
-    case X509_L_FILE_LOAD:
+    case X509_L_FILE_LOAD:   /* 加载X509文件 */
         if (argl == X509_FILETYPE_DEFAULT) {
             file = (char *)getenv(X509_get_default_cert_file_env());
             if (file)
@@ -61,7 +61,7 @@ static int by_file_ctrl(X509_LOOKUP *ctx, int cmd, const char *argp,
                 X509err(X509_F_BY_FILE_CTRL, X509_R_LOADING_DEFAULTS);
             }
         } else {
-            if (argl == X509_FILETYPE_PEM)
+            if (argl == X509_FILETYPE_PEM)  /* 加载PEM格式的文件 */
                 ok = (X509_load_cert_crl_file(ctx, argp,
                                               X509_FILETYPE_PEM) != 0);
             else
@@ -186,36 +186,43 @@ int X509_load_crl_file(X509_LOOKUP *ctx, const char *file, int type)
     return (ret);
 }
 
+/* 加载客户端可信任的CA的证书 */
 int X509_load_cert_crl_file(X509_LOOKUP *ctx, const char *file, int type)
 {
     STACK_OF(X509_INFO) *inf;
     X509_INFO *itmp;
     BIO *in;
     int i, count = 0;
+    
     if (type != X509_FILETYPE_PEM)
         return X509_load_cert_file(ctx, file, type);
+
+    /* 打开文件 */
     in = BIO_new_file(file, "r");
     if (!in) {
         X509err(X509_F_X509_LOAD_CERT_CRL_FILE, ERR_R_SYS_LIB);
         return 0;
     }
+    /* 读取信息 */
     inf = PEM_X509_INFO_read_bio(in, NULL, NULL, NULL);
     BIO_free(in);
     if (!inf) {
         X509err(X509_F_X509_LOAD_CERT_CRL_FILE, ERR_R_PEM_LIB);
         return 0;
     }
+    /* 顺次加载 */
     for (i = 0; i < sk_X509_INFO_num(inf); i++) {
         itmp = sk_X509_INFO_value(inf, i);
-        if (itmp->x509) {
+        if (itmp->x509) {   /* 加载X509证书 */
             X509_STORE_add_cert(ctx->store_ctx, itmp->x509);
             count++;
         }
-        if (itmp->crl) {
+        if (itmp->crl) {    /* 加载CRL，证书吊销列表 */
             X509_STORE_add_crl(ctx->store_ctx, itmp->crl);
             count++;
         }
     }
+    
     sk_X509_INFO_pop_free(inf, X509_INFO_free);
     return count;
 }

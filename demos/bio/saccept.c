@@ -7,14 +7,15 @@
  * https://www.openssl.org/source/license.html
  */
 
-/*-
+/*
  * A minimal program to serve an SSL connection.
  * It uses blocking.
  * saccept host:port
  * host is the interface IP to use.  If any interface, use *:port
  * The default it *:4433
  *
- * cc -I../../include saccept.c -L../.. -lssl -lcrypto -ldl
+ *指定了编译方式
+ * gcc -I../../include saccept.c -L../.. -lssl -lcrypto -ldl
  */
 
 #include <stdio.h>
@@ -22,7 +23,7 @@
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 
-#define CERT_FILE       "server.pem"
+#define CERT_FILE       "server.pem"     /* 包含公钥证书、私钥 */
 
 static int done = 0;
 
@@ -53,22 +54,24 @@ int main(int argc, char *argv[])
     char buf[512];
     int ret = 1, i;
 
-    if (argc <= 1)
+    if (argc <= 1)           /* 只接受一个参数，格式"host:port" */
         port = "*:4433";
     else
         port = argv[1];
 
+    /* 构建SSL环境 */
     ctx = SSL_CTX_new(TLS_server_method());
     if (!SSL_CTX_use_certificate_chain_file(ctx, CERT_FILE))
-        goto err;
+        goto err;            /* 加载证书链 */
     if (!SSL_CTX_use_PrivateKey_file(ctx, CERT_FILE, SSL_FILETYPE_PEM))
-        goto err;
+        goto err;            /* 加载私钥 */
     if (!SSL_CTX_check_private_key(ctx))
-        goto err;
+        goto err;            /* 验证私钥 */
 
-    /* Setup server side SSL bio */
+    /* 构建BIO，Setup server side SSL bio */
     ssl_bio = BIO_new_ssl(ctx, 0);
 
+    /* 构建监听插口 */
     if ((in = BIO_new_accept(port)) == NULL)
         goto err;
 
@@ -88,12 +91,11 @@ int main(int argc, char *argv[])
      * socket.  In this loop, the first actual accept will occur in the
      * BIO_read() function.
      */
-
-    if (BIO_do_accept(in) <= 0)
+    if (BIO_do_accept(in) <= 0)       /* 设置触发握手的标识 */
         goto err;
 
     while (!done) {
-        i = BIO_read(in, buf, 512);
+        i = BIO_read(in, buf, 512);   /* 读取请求数据，真实触发握手 */
         if (i == 0) {
             /*
              * If we have finished, remove the underlying BIO stack so the
@@ -107,7 +109,7 @@ int main(int argc, char *argv[])
         }
         if (i < 0)
             goto err;
-        fwrite(buf, 1, i, stdout);
+        fwrite(buf, 1, i, stdout);    /* 输出 */
         fflush(stdout);
     }
 

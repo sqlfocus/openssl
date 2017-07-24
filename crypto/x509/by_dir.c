@@ -32,14 +32,14 @@ struct lookup_dir_hashes_st {
 };
 
 struct lookup_dir_entry_st {
-    char *dir;
-    int dir_type;
-    STACK_OF(BY_DIR_HASH) *hashes;
+    char *dir;          /* 目录名 */
+    int dir_type;       /* 目录包含的文件类型，如 X509_FILETYPE_PEM */
+    STACK_OF(BY_DIR_HASH) *hashes; /**/
 };
 
 typedef struct lookup_dir_st {
     BUF_MEM *buffer;
-    STACK_OF(BY_DIR_ENTRY) *dirs;
+    STACK_OF(BY_DIR_ENTRY) *dirs;  /* 查找目录表，表项 struct lookup_dir_entry_st */
     CRYPTO_RWLOCK *lock;
 } BY_DIR;
 
@@ -78,19 +78,19 @@ static int dir_ctrl(X509_LOOKUP *ctx, int cmd, const char *argp, long argl,
     ld = (BY_DIR *)ctx->method_data;
 
     switch (cmd) {
-    case X509_L_ADD_DIR:
+    case X509_L_ADD_DIR:  /* 从目录加载PEM文件 */
         if (argl == X509_FILETYPE_DEFAULT) {
-            dir = (char *)getenv(X509_get_default_cert_dir_env());
+            dir = (char *)getenv(X509_get_default_cert_dir_env());   /* 环境变量 SSL_CERT_DIR 指定的目录 */
             if (dir)
                 ret = add_cert_dir(ld, dir, X509_FILETYPE_PEM);
             else
-                ret = add_cert_dir(ld, X509_get_default_cert_dir(),
+                ret = add_cert_dir(ld, X509_get_default_cert_dir(),  /* 安装目录 OPENSSLDIR"/certs" */
                                    X509_FILETYPE_PEM);
             if (!ret) {
                 X509err(X509_F_DIR_CTRL, X509_R_LOADING_CERT_DIR);
             }
         } else
-            ret = add_cert_dir(ld, argp, (int)argl);
+            ret = add_cert_dir(ld, argp, (int)argl);                 /* 参数目录 */
         break;
     }
     return (ret);
@@ -150,6 +150,7 @@ static void free_dir(X509_LOOKUP *lu)
     OPENSSL_free(a);
 }
 
+/* 从指定目录加载指定类型的CA证书文件 */
 static int add_cert_dir(BY_DIR *ctx, const char *dir, int type)
 {
     const char *s, *p;
@@ -162,15 +163,17 @@ static int add_cert_dir(BY_DIR *ctx, const char *dir, int type)
     s = dir;
     p = s;
     do {
-        if ((*p == LIST_SEPARATOR_CHAR) || (*p == '\0')) {
+        /* 提取目录名，并处理 */
+        if ((*p == LIST_SEPARATOR_CHAR) || (*p == '\0')) {   /* 可以指定目录列表，以指定的分隔符分开 */
             BY_DIR_ENTRY *ent;
             int j;
             size_t len;
             const char *ss = s;
             s = p + 1;
-            len = p - ss;
+            len = p - ss;         /* ss~p之间为目录名，s指向下一个目录名 */
             if (len == 0)
                 continue;
+            /* 验证是否已经加载 */
             for (j = 0; j < sk_BY_DIR_ENTRY_num(ctx->dirs); j++) {
                 ent = sk_BY_DIR_ENTRY_value(ctx->dirs, j);
                 if (strlen(ent->dir) == len &&
@@ -179,6 +182,8 @@ static int add_cert_dir(BY_DIR *ctx, const char *dir, int type)
             }
             if (j < sk_BY_DIR_ENTRY_num(ctx->dirs))
                 continue;
+
+            /* 增加新目录 */
             if (ctx->dirs == NULL) {
                 ctx->dirs = sk_BY_DIR_ENTRY_new_null();
                 if (!ctx->dirs) {

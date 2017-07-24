@@ -16,7 +16,7 @@
 
 # define OBJ_NAME_TYPE_UNDEF             0x00
 # define OBJ_NAME_TYPE_MD_METH           0x01
-# define OBJ_NAME_TYPE_CIPHER_METH       0x02
+# define OBJ_NAME_TYPE_CIPHER_METH       0x02   /* 对称加密算法 */
 # define OBJ_NAME_TYPE_PKEY_METH         0x03
 # define OBJ_NAME_TYPE_COMP_METH         0x04
 # define OBJ_NAME_TYPE_NUM               0x05
@@ -31,11 +31,12 @@
 extern "C" {
 #endif
 
+/* names_lh 哈希表对象 */
 typedef struct obj_name_st {
-    int type;
-    int alias;
-    const char *name;
-    const char *data;
+    int type;         /* 类型, OBJ_NAME_TYPE_CIPHER_METH */
+    int alias;        /* OBJ_NAME_ALIAS or 0 */
+    const char *name; /* 名称，short name或long name */
+    const char *data; /* 对象指针 */
 } OBJ_NAME;
 
 # define         OBJ_create_and_add_object(a,b,c) OBJ_create(a,b,c)

@@ -6,8 +6,9 @@
 的整合流程！
 
 * 代码组织
- - apps                   :: 示例程序，命令行程序
+ - apps                   :: 命令行程序
  - crypto                 :: 加解密算法库
+ - demos                  :: 示例程序
  - ssl                    :: TLS协议库
 
 * DER编码
@@ -107,16 +108,164 @@ wuhSh8TMHAsgXql4Ba3AoDXVbPbzHBo8N4CfgmSxoplnj6/crn5g1ofLAtzokq8E
 * X509格式
 rfc 5280
 
-* RSA算法原理
+* 非对成加密
+** RSA算法原理
 [[file:RSA%E7%AE%97%E6%B3%95%E5%8E%9F%E7%90%86.pdf][file:RSA算法原理.pdf]]
 http://blog.csdn.net/dbs1215/article/details/48953589
 rfc 8017
 
-* openssl s_client
-模拟客户端, s_client_main() in ~/apps/s_client.c
+** rsa
 
-* openssl s_server
-模拟服务器, s_server_main() in ~/apps/s_server.c
+
+* 对称加密
+** 类型
+ - block ciphers
+   : traditionally the most popular
+   : operate by breaking up data into fixed-size blocks, and then encrypting each block individually
+   : Leftover data is traditionally padded so that the length of the plaintext is a multiple of the cipher's block size
+ - stream ciphers
+   : essentially just cryptographic pseudorandom number generators
+   : use a starting seed as a key to produce a stream of random bits known as the keystream
+   : To encrypt data, one takes the plaintext and simply XORs it with the keystream
+   :
+   : stream ciphers tend to be far faster than block ciphers
+
+** 块儿加密模式
+http://blog.csdn.net/jackyechina/article/details/52522971
+OpenSSL实现了块儿加密的四种常用模式
+ - ECB(Electronic Code Book) mode
+   : 电码本模式
+   : basic mode of operation
+   :
+   : takes a single block of plaintext and produces a single block of ciphertext
+   : Data streams are broken into blocks that are individually processed
+   :
+   : 优点
+   :   messages can be encrypted in parallel
+   : 缺点
+   :   highly susceptible to dictionary attacks
+   :   is almost always the wrong mode for the job, because it is so difficult to use securely
+ - CBC(Cipher Block Chaining) mode
+   : 一个明文分组在被加密之前要与前一个的密文分组进行异或运算
+   :
+   : 需协商一个初始化向量(IV)，此IV没有实际意义，只在计算第一分组密文前被用
+   : 于异或操作，避免"dictionary attacks are possible if the data streams 
+   : have common beginning sequences"
+   :
+   : 缺点
+   :   加密过程是串行的，无法被并行化
+ - CFB(Cipher Feedback) mode
+   : 密文反馈
+   : one way of turning a block cipher into a stream cipher
+   : 
+   : 需要使用一个与块的大小相同的移位寄存器，并用IV将寄存器初始化; 然后，将
+   : 寄存器内容使用块密码加密，然后将结果的最高x位与平文的x进行异或，以产生
+   : 密文的x位; 下一步将生成的x位密文移入寄存器中，并对下面的x位平文重复这
+   : 一过程
+   :
+   : 解密过程与加密过程相似，以IV开始，对寄存器加密，将结果的高x与密文异或，
+   : 产生x位平文，再将密文的下面x位移入寄存器
+   :
+   : 缺点
+   :   a complete block of plaintext must be received before encryption can begin
+   :   加密过程不能并行化
+   :   avoid reusing the same key when using CFB mode
+ - OFB(Output Feedback) mode
+   : 输出反馈模式
+   : another way of turning a block cipher into a stream cipher
+
+** des定义
+利用宏定义算法套件，~/crypto/evp/e_des.c
+#+BEGIN_EXAMPLE
+BLOCK_CIPHER_defs(des, EVP_DES_KEY, NID_des, 8, 8, 8, 64,
+                  EVP_CIPH_RAND_KEY, des_init_key, NULL,
+                  EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, des_ctrl)
+
+===>
+BLOCK_CIPHER_def_cbc(des, EVP_DES_KEY, NID_des, 8, 8, 8, EVP_CIPH_RAND_KEY, \
+                     des_init_key, NULL, EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, des_ctrl) \
+BLOCK_CIPHER_def_cfb(des, EVP_DES_KEY, NID_des, 8, 8, 64, EVP_CIPH_RAND_KEY,\
+                     des_init_key, NULL, EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, des_ctrl) \
+BLOCK_CIPHER_def_ofb(des, EVP_DES_KEY, NID_des, 8, 8, 64, EVP_CIPH_RAND_KEY,\
+                     des_init_key, NULL, EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, des_ctrl) \
+BLOCK_CIPHER_def_ecb(des, EVP_DES_KEY, NID_des, 8, 8, EVP_CIPH_RAND_KEY, \
+                     des_init_key, NULL, EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, des_ctrl)
+
+===>
+BLOCK_CIPHER_def1(des, cbc, cbc, CBC, EVP_DES_KEY, NID_des, 8, 8, 8, EVP_CIPH_RAND_KEY, \
+                     des_init_key, NULL, EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, des_ctrl) \
+BLOCK_CIPHER_def1(des, cfb64, cfb64, CFB, EVP_DES_KEY, NID_des, 1, 8, 8, EVP_CIPH_RAND_KEY,\
+                     des_init_key, NULL, EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, des_ctrl) \
+BLOCK_CIPHER_def1(des, ofb64, ofb, OFB, EVP_DES_KEY, NID_des, 1, 8, 8, EVP_CIPH_RAND_KEY,\
+                     des_init_key, NULL, EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, des_ctrl) \
+BLOCK_CIPHER_def1(des, ecb, ecb, ECB, EVP_DES_KEY, NID_des, 8, 8, 0, EVP_CIPH_RAND_KEY, \
+                     des_init_key, NULL, EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, des_ctrl)
+
+===>
+static const EVP_CIPHER des_cbc = {
+    NID_des_cbc, 8, 8, 8,
+    EVP_CIPH_RAND_KEY | EVP_CIPH_CBC_CBC,
+    des_init_key,
+    des_cbc_cipher,
+    NULL,
+    sizeof(EVP_DES_KEY),
+    EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, 
+    des_ctrl
+    NULL
+};
+const EVP_CIPHER *EVP_des_cbc(void) { return &des_cbc; }
+
+static const EVP_CIPHER des_cfb64 = {
+    NID_des_cfb64, 1, 8, 8,
+    EVP_CIPH_RAND_KEY | EVP_CIPH_CFB_CFB,
+    des_init_key,
+    des_cfb64_cipher,
+    NULL,
+    sizeof(EVP_DES_KEY),
+    EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, 
+    des_ctrl
+    NULL
+};
+const EVP_CIPHER *EVP_des_cfb64(void) { return &des_cfb64; }
+
+static const EVP_CIPHER des_ofb = {
+    NID_des_ofb64, 1, 8, 8,
+    EVP_CIPH_RAND_KEY | EVP_CIPH_CBC_CBC,
+    des_init_key,
+    des_ofb_cipher,
+    NULL,
+    sizeof(EVP_DES_KEY),
+    EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, 
+    des_ctrl
+    NULL
+};
+const EVP_CIPHER *EVP_des_ofb(void) { return &des_ofb; }
+
+static const EVP_CIPHER des_ecb = {
+    NID_des_ecb, 8, 8, 0,
+    EVP_CIPH_RAND_KEY | EVP_CIPH_CBC_CBC,
+    des_init_key,
+    des_ecb_cipher,
+    NULL,
+    sizeof(EVP_DES_KEY),
+    EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, 
+    des_ctrl
+    NULL
+};
+const EVP_CIPHER *EVP_des_ecb(void) { return &des_ecb; }
+#+END_EXAMPLE
+
+* 客户端示例
+ - openssl s_client
+   : 客户端子命令, s_client_main() in ~/apps/s_client.c
+ - 精简客户端
+   : main() in ~/demos/bio/sconnect.c
+
+* 服务器示例
+ - openssl s_server
+   : 服务器子命令, s_server_main() in ~/apps/s_server.c
+ - 精简服务器
+   : main() in ~/demos/bio/saccept.c
 
 * SSL_do_handshake()
 定义文件：~/ssl/ssl_lib.c

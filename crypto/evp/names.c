@@ -14,6 +14,7 @@
 #include <openssl/x509.h>
 #include "internal/evp_int.h"
 
+/* 添加对称加密套件到全局hash表 */
 int EVP_add_cipher(const EVP_CIPHER *c)
 {
     int r;
@@ -21,7 +22,7 @@ int EVP_add_cipher(const EVP_CIPHER *c)
     if (c == NULL)
         return 0;
 
-    /* 加入names_lh哈希表，分别用short name、long name */
+    /* 加入 names_lh 哈希表，分别用short name、long name */
     r = OBJ_NAME_add(OBJ_nid2sn(c->nid), OBJ_NAME_TYPE_CIPHER_METH,
                      (const char *)c);
     if (r == 0)

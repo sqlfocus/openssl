@@ -152,7 +152,7 @@ static int check_pem(const char *nm, const char *name)
             /*
              * NB: ENGINE implementations won't contain a deprecated old
              * private key decode function so don't look for them.
-             */
+             *//* 对于“-----BEGIN RSA PRIVATE KEY-----”, =rsa_asn1_meths[] */
             ameth = EVP_PKEY_asn1_find_str(NULL, nm, slen);
             if (ameth && ameth->old_priv_decode)
                 return 1;
@@ -429,6 +429,8 @@ int PEM_do_header(EVP_CIPHER_INFO *cipher, unsigned char *data, long *plen,
     /* Convert the pass phrase from EBCDIC */
     ebcdic2ascii(buf, buf, keylen);
 #endif
+    
+    /* 利用密码生成解密密钥 */
     if (!EVP_BytesToKey(cipher->cipher, EVP_md5(), &(cipher->iv[0]),
                         (unsigned char *)buf, keylen, 1, key, NULL))
         return 0;

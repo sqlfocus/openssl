@@ -127,7 +127,7 @@ static int ssl_set_pkey(CERT *c, EVP_PKEY *pkey)
         return (0);
     }
 
-    if (c->pkeys[i].x509 != NULL) {
+    if (c->pkeys[i].x509 != NULL) {    /* 已存在公钥，则判断是否匹配 */
         EVP_PKEY *pktmp;
         pktmp = X509_get0_pubkey(c->pkeys[i].x509);
         if (pktmp == NULL) {
@@ -517,7 +517,7 @@ int SSL_CTX_use_RSAPrivateKey_ASN1(SSL_CTX *ctx, const unsigned char *d,
 }
 #endif                          /* !OPENSSL_NO_RSA */
 
-/* 应用私钥 */
+/* 从内存数据结构加载私钥 */
 int SSL_CTX_use_PrivateKey(SSL_CTX *ctx, EVP_PKEY *pkey)
 {
     if (pkey == NULL) {
@@ -527,6 +527,7 @@ int SSL_CTX_use_PrivateKey(SSL_CTX *ctx, EVP_PKEY *pkey)
     return (ssl_set_pkey(ctx->cert, pkey));  /* 配置私钥到当前SSL环境 */
 }
 
+/* 从文件加载私钥 */
 int SSL_CTX_use_PrivateKey_file(SSL_CTX *ctx, const char *file, int type)
 {
     int j, ret = 0;
@@ -543,6 +544,8 @@ int SSL_CTX_use_PrivateKey_file(SSL_CTX *ctx, const char *file, int type)
         SSLerr(SSL_F_SSL_CTX_USE_PRIVATEKEY_FILE, ERR_R_SYS_LIB);
         goto end;
     }
+    
+    /* 读取私钥 */
     if (type == SSL_FILETYPE_PEM) {
         j = ERR_R_PEM_LIB;
         pkey = PEM_read_bio_PrivateKey(in, NULL,
@@ -559,6 +562,8 @@ int SSL_CTX_use_PrivateKey_file(SSL_CTX *ctx, const char *file, int type)
         SSLerr(SSL_F_SSL_CTX_USE_PRIVATEKEY_FILE, j);
         goto end;
     }
+    
+    /* 加载到SSL环境 */
     ret = SSL_CTX_use_PrivateKey(ctx, pkey);
     EVP_PKEY_free(pkey);
  end:
@@ -588,7 +593,7 @@ int SSL_CTX_use_PrivateKey_ASN1(int type, SSL_CTX *ctx,
  * Read a file that contains our certificate in "PEM" format, possibly
  * followed by a sequence of CA certificates that should be sent to the peer
  * in the Certificate message.
- */
+ *//* 服务器端加载证书链，以便在Certificate消息中发送到客户端 */
 static int use_certificate_chain_file(SSL_CTX *ctx, SSL *ssl, const char *file)
 {
     BIO *in;
@@ -608,17 +613,18 @@ static int use_certificate_chain_file(SSL_CTX *ctx, SSL *ssl, const char *file)
         passwd_callback_userdata = ssl->default_passwd_callback_userdata;
     }
 
+    /* 构建BIO，打开PEM文件, methods_filep */
     in = BIO_new(BIO_s_file());
     if (in == NULL) {
         SSLerr(SSL_F_USE_CERTIFICATE_CHAIN_FILE, ERR_R_BUF_LIB);
         goto end;
     }
-
     if (BIO_read_filename(in, file) <= 0) {
         SSLerr(SSL_F_USE_CERTIFICATE_CHAIN_FILE, ERR_R_SYS_LIB);
         goto end;
     }
 
+    /* 读取并加载公钥 */
     x = PEM_read_bio_X509_AUX(in, NULL, passwd_callback,
                               passwd_callback_userdata);
     if (x == NULL) {
@@ -626,6 +632,7 @@ static int use_certificate_chain_file(SSL_CTX *ctx, SSL *ssl, const char *file)
         goto end;
     }
 
+    /* 保存到相应的SSL环境或SSL对象 */
     if (ctx)
         ret = SSL_CTX_use_certificate(ctx, x);
     else
@@ -634,6 +641,9 @@ static int use_certificate_chain_file(SSL_CTX *ctx, SSL *ssl, const char *file)
     if (ERR_peek_error() != 0)
         ret = 0;                /* Key/certificate mismatch doesn't imply
                                  * ret==0 ... */
+    /* 读取并加载CA链
+       <TAKECARE!!!>由此可见，如果把所有CA证书和公钥放在同一个文件，
+                    则公钥要放在第一个，而签发它的CA证书放在后边 */
     if (ret) {
         /*
          * If we could set up our certificate, now proceed to the CA
@@ -643,21 +653,22 @@ static int use_certificate_chain_file(SSL_CTX *ctx, SSL *ssl, const char *file)
         int r;
         unsigned long err;
 
+        /* 清除CA链 */
         if (ctx)
             r = SSL_CTX_clear_chain_certs(ctx);
         else
             r = SSL_clear_chain_certs(ssl);
-
         if (r == 0) {
             ret = 0;
             goto end;
         }
 
+        /* 继续读取，并加载CA链 */
         while ((ca = PEM_read_bio_X509(in, NULL, passwd_callback,
                                        passwd_callback_userdata))
                != NULL) {
             if (ctx)
-                r = SSL_CTX_add0_chain_cert(ctx, ca);
+                r = SSL_CTX_add0_chain_cert(ctx, ca);  /* 加入 SSL->cert->key->chain */
             else
                 r = SSL_add0_chain_cert(ssl, ca);
             /*
@@ -686,6 +697,7 @@ static int use_certificate_chain_file(SSL_CTX *ctx, SSL *ssl, const char *file)
     return (ret);
 }
 
+/* 服务器端加载证书链，以便在Certificate消息中发送到客户端 */
 int SSL_CTX_use_certificate_chain_file(SSL_CTX *ctx, const char *file)
 {
     return use_certificate_chain_file(ctx, NULL, file);

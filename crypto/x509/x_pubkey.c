@@ -18,9 +18,9 @@
 #include <openssl/dsa.h>
 
 struct X509_pubkey_st {
-    X509_ALGOR *algor;
-    ASN1_BIT_STRING *public_key;
-    EVP_PKEY *pkey;
+    X509_ALGOR *algor;           /* */
+    ASN1_BIT_STRING *public_key; /* 证书对应公钥的字符串，解析后为->pkey */
+    EVP_PKEY *pkey;              /* 公钥 */
 };
 
 static int x509_pubkey_decode(EVP_PKEY **pk, X509_PUBKEY *key);

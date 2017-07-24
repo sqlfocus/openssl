@@ -37,19 +37,21 @@ int X509_STORE_load_locations(X509_STORE *ctx, const char *file,
 {
     X509_LOOKUP *lookup;
 
+    /* 从文件加载 */
     if (file != NULL) {
         lookup = X509_STORE_add_lookup(ctx, X509_LOOKUP_file());
-        if (lookup == NULL)
+        if (lookup == NULL)  /* =x509_file_lookup */
             return (0);
         if (X509_LOOKUP_load_file(lookup, file, X509_FILETYPE_PEM) != 1)
-            return (0);
+            return (0);      /* =by_file_ctrl(, X509_L_FILE_LOAD) */
     }
+    /* 从目录加载 */
     if (path != NULL) {
         lookup = X509_STORE_add_lookup(ctx, X509_LOOKUP_hash_dir());
-        if (lookup == NULL)
+        if (lookup == NULL)  /* =x509_dir_lookup */
             return (0);
         if (X509_LOOKUP_add_dir(lookup, path, X509_FILETYPE_PEM) != 1)
-            return (0);
+            return (0);      /* =dir_ctrl(, X509_L_ADD_DIR) */
     }
     if ((path == NULL) && (file == NULL))
         return (0);

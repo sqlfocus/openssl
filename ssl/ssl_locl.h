@@ -694,11 +694,11 @@ DEFINE_LHASH_OF(X509_NAME);
 # define TLSEXT_KEYNAME_LENGTH 16
 
 struct ssl_ctx_st {
-    const SSL_METHOD *method;                /* 特定TLS版本的API */
+    const SSL_METHOD *method;                /* 特定TLS版本的API，参考 IMPLEMENT_tls_meth_func() */
     STACK_OF(SSL_CIPHER) *cipher_list;
     /* same as above but sorted for lookup */
     STACK_OF(SSL_CIPHER) *cipher_list_by_id;
-    struct x509_store_st /* X509_STORE */ *cert_store;
+    struct x509_store_st /* X509_STORE */ *cert_store;   /* 存储客户端信任的CA证书、CRL吊销证书，以验证服务器端是否可信任 */
     LHASH_OF(SSL_SESSION) *sessions;         /* 存储会话，用于会话恢复 */
     /*
      * Most session-ids that will be cached, default is
@@ -805,7 +805,7 @@ struct ssl_ctx_st {
     int max_proto_version;
     size_t max_cert_list;
 
-    struct cert_st /* CERT */ *cert;    /* 此SSL环境的密钥信息 */
+    struct cert_st /* CERT */ *cert;    /* 非对成密钥信息 */
     int read_ahead;
 
     /* callback that allows applications to peek at protocol messages */
@@ -1595,7 +1595,7 @@ struct cert_pkey_st {
     X509 *x509;            /* 公钥 */
     EVP_PKEY *privatekey;  /* 私钥 */
     /* Chain for this certificate */
-    STACK_OF(X509) *chain;
+    STACK_OF(X509) *chain; /* 验证公钥需要的证书链，即从客户端可信任CA到本地公钥证书的签发机构的证书 */
     /*-
      * serverinfo data for this certificate.  The data is in TLS Extension
      * wire format, specifically it's a series of records like:
@@ -1644,6 +1644,7 @@ typedef struct {
     size_t meths_count;
 } custom_ext_methods;
 
+/* SSL环境中非对称密钥的信息 */
 typedef struct cert_st {
     /* Current active set */
     /*
@@ -1670,7 +1671,7 @@ typedef struct cert_st {
      */
     uint16_t *conf_sigalgs;
     /* Size of above array */
-    size_t conf_sigalgslen;
+     size_t conf_sigalgslen;
     /*
      * Client authentication signature algorithms, if not set then uses
      * conf_sigalgs. On servers these will be the signature algorithms sent

@@ -99,7 +99,7 @@ int EVP_PKEY_copy_parameters(EVP_PKEY *to, const EVP_PKEY *from)
 }
 
 int EVP_PKEY_missing_parameters(const EVP_PKEY *pkey)
-{
+{/* rsa_asn1_meths->param_missing=NULL */
     if (pkey->ameth && pkey->ameth->param_missing)
         return pkey->ameth->param_missing(pkey);
     return 0;
@@ -114,6 +114,7 @@ int EVP_PKEY_cmp_parameters(const EVP_PKEY *a, const EVP_PKEY *b)
     return -2;
 }
 
+/* 比较非对成密钥对是否匹配 */
 int EVP_PKEY_cmp(const EVP_PKEY *a, const EVP_PKEY *b)
 {
     if (a->type != b->type)
@@ -121,14 +122,15 @@ int EVP_PKEY_cmp(const EVP_PKEY *a, const EVP_PKEY *b)
 
     if (a->ameth) {
         int ret;
-        /* Compare parameters if the algorithm has them */
+        /* 比较密钥参数是否相同，Compare parameters if the algorithm has them */
         if (a->ameth->param_cmp) {
             ret = a->ameth->param_cmp(a, b);
             if (ret <= 0)
                 return ret;
         }
 
-        if (a->ameth->pub_cmp)
+        /* 如RSA，比较共享密钥信息N/E是否相同 */
+        if (a->ameth->pub_cmp)   /* rsa_asn1_meths->pub_cmp=rsa_pub_cmp() */
             return a->ameth->pub_cmp(a, b);
     }
 
@@ -183,7 +185,7 @@ static int pkey_set_type(EVP_PKEY *pkey, int type, const char *str, int len)
         /*
          * If key type matches and a method exists then this lookup has
          * succeeded once so just indicate success.
-         */
+         *//* 此数据结构的类型已经初始化 */
         if ((type == pkey->save_type) && pkey->ameth)
             return 1;
 #ifndef OPENSSL_NO_ENGINE
@@ -192,6 +194,8 @@ static int pkey_set_type(EVP_PKEY *pkey, int type, const char *str, int len)
         pkey->engine = NULL;
 #endif
     }
+    
+    /* 查找操控ASN.1格式的私钥的函数集合 */
     if (str)
         ameth = EVP_PKEY_asn1_find_str(&e, str, len);
     else
@@ -204,6 +208,8 @@ static int pkey_set_type(EVP_PKEY *pkey, int type, const char *str, int len)
         EVPerr(EVP_F_PKEY_SET_TYPE, EVP_R_UNSUPPORTED_ALGORITHM);
         return 0;
     }
+
+    /* 初始化 */
     if (pkey) {
         pkey->ameth = ameth;
         pkey->engine = e;

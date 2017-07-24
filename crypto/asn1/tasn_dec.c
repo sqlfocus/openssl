@@ -121,7 +121,7 @@ int ASN1_item_ex_d2i(ASN1_VALUE **pval, const unsigned char **in, long len,
  * Decode an item, taking care of IMPLICIT tagging, if any. If 'opt' set and
  * tag mismatch return -1 to handle OPTIONAL
  */
-
+/* 对于RSA私钥，此处的参数*it为 RSAPrivateKey_it() */
 static int asn1_item_embed_d2i(ASN1_VALUE **pval, const unsigned char **in,
                                long len, const ASN1_ITEM *it,
                                int tag, int aclass, char opt, ASN1_TLC *ctx)

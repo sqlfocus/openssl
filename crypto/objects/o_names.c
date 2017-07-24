@@ -41,7 +41,7 @@ static int obj_strcmp(const char *a, const char *b)
 /*
  * I use the ex_data stuff to manage the identifiers for the obj_name_types
  * that applications may define.  I only really use the free function field.
- */
+ *//* 存放openssl内部的对象，如对称加密算法、hash算法等 */
 static LHASH_OF(OBJ_NAME) *names_lh = NULL;
 static int names_type_num = OBJ_NAME_TYPE_NUM;
 
@@ -183,6 +183,7 @@ const char *OBJ_NAME_get(const char *name, int type)
     }
 }
 
+/* 将openssl对象加入 names_lh 表 */
 int OBJ_NAME_add(const char *name, int type, const char *data)
 {
     OBJ_NAME *onp, *ret;
@@ -191,7 +192,7 @@ int OBJ_NAME_add(const char *name, int type, const char *data)
     if ((names_lh == NULL) && !OBJ_NAME_init())
         return (0);
 
-    alias = type & OBJ_NAME_ALIAS;
+    alias = type & OBJ_NAME_ALIAS;  /* 是否为其他对象的别名 */
     type &= ~OBJ_NAME_ALIAS;
 
     onp = OPENSSL_malloc(sizeof(*onp));
@@ -200,13 +201,13 @@ int OBJ_NAME_add(const char *name, int type, const char *data)
         return 0;
     }
 
-    onp->name = name;
+    onp->name = name;               /* 初始化 */
     onp->alias = alias;
     onp->type = type;
     onp->data = data;
 
     ret = lh_OBJ_NAME_insert(names_lh, onp);
-    if (ret != NULL) {
+    if (ret != NULL) {              /* 插入 */
         /* free things */
         if ((name_funcs_stack != NULL)
             && (sk_NAME_FUNCS_num(name_funcs_stack) > ret->type)) {

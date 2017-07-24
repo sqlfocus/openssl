@@ -190,14 +190,98 @@ static int des_cfb8_cipher(EVP_CIPHER_CTX *ctx, unsigned char *out,
     return 1;
 }
 
+#if 0
+static const EVP_CIPHER des_cbc = {
+    NID_des_cbc, 8, 8, 8,
+    EVP_CIPH_RAND_KEY | EVP_CIPH_CBC_CBC,
+    des_init_key,
+    des_cbc_cipher,
+    NULL,
+    sizeof(EVP_DES_KEY),
+    EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, 
+    des_ctrl
+    NULL
+};
+const EVP_CIPHER *EVP_des_cbc(void) { return &des_cbc; }
+
+static const EVP_CIPHER des_cfb64 = {
+    NID_des_cfb64, 1, 8, 8,
+    EVP_CIPH_RAND_KEY | EVP_CIPH_CFB_CFB,
+    des_init_key,
+    des_cfb64_cipher,
+    NULL,
+    sizeof(EVP_DES_KEY),
+    EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, 
+    des_ctrl
+    NULL
+};
+const EVP_CIPHER *EVP_des_cfb64(void) { return &des_cfb64; }
+
+static const EVP_CIPHER des_ofb = {
+    NID_des_ofb64, 1, 8, 8,
+    EVP_CIPH_RAND_KEY | EVP_CIPH_CBC_CBC,
+    des_init_key,
+    des_ofb_cipher,
+    NULL,
+    sizeof(EVP_DES_KEY),
+    EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, 
+    des_ctrl
+    NULL
+};
+const EVP_CIPHER *EVP_des_ofb(void) { return &des_ofb; }
+
+static const EVP_CIPHER des_ecb = {
+    NID_des_ecb, 8, 8, 0,
+    EVP_CIPH_RAND_KEY | EVP_CIPH_CBC_CBC,
+    des_init_key,
+    des_ecb_cipher,
+    NULL,
+    sizeof(EVP_DES_KEY),
+    EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, 
+    des_ctrl
+    NULL
+};
+const EVP_CIPHER *EVP_des_ecb(void) { return &des_ecb; }
+#endif
+/* 展开结果如上 #if 0 ... #endif */
 BLOCK_CIPHER_defs(des, EVP_DES_KEY, NID_des, 8, 8, 8, 64,
                   EVP_CIPH_RAND_KEY, des_init_key, NULL,
                   EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, des_ctrl)
 
+#if 0
+static const EVP_CIPHER des_cfb1 = {
+    NID_des_cfb1, 1, 8, 8,
+    EVP_CIPH_RAND_KEY | EVP_CIPH_CFB_CFB,
+    des_init_key,
+    des_cfb1_cipher,
+    NULL,
+    sizeof(EVP_DES_KEY),
+    EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, 
+    des_ctrl
+    NULL
+};
+const EVP_CIPHER *EVP_des_cfb1(void) { return &des_cfb1; }
+#endif
+/* 展开结果如上 #if 0 ... #endif */
     BLOCK_CIPHER_def_cfb(des, EVP_DES_KEY, NID_des, 8, 8, 1,
                      EVP_CIPH_RAND_KEY, des_init_key, NULL,
                      EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, des_ctrl)
 
+#if 0
+static const EVP_CIPHER des_cfb8 = {
+    NID_des_cfb8, 1, 8, 8,
+    EVP_CIPH_RAND_KEY | EVP_CIPH_CFB_CFB,
+    des_init_key,
+    des_cfb8_cipher,
+    NULL,
+    sizeof(EVP_DES_KEY),
+    EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, 
+    des_ctrl
+    NULL
+};
+const EVP_CIPHER *EVP_des_cfb8(void) { return &des_cfb8; }
+#endif
+/* 展开结果如上 #if 0 ... #endif */
     BLOCK_CIPHER_def_cfb(des, EVP_DES_KEY, NID_des, 8, 8, 8,
                      EVP_CIPH_RAND_KEY, des_init_key, NULL,
                      EVP_CIPHER_set_asn1_iv, EVP_CIPHER_get_asn1_iv, des_ctrl)

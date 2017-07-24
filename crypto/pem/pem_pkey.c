@@ -78,10 +78,10 @@ EVP_PKEY *PEM_read_bio_PrivateKey(BIO *bp, EVP_PKEY **x, pem_password_cb *cb,
         }
         PKCS8_PRIV_KEY_INFO_free(p8inf);
     } else if ((slen = pem_check_suffix(nm, "PRIVATE KEY")) > 0) {
-        const EVP_PKEY_ASN1_METHOD *ameth;
+        const EVP_PKEY_ASN1_METHOD *ameth;            /* 如"BEGIN RSA PRIVATE KEY", rsa_asn1_meths[] */
         ameth = EVP_PKEY_asn1_find_str(NULL, nm, slen);
         if (!ameth || !ameth->old_priv_decode)
-            goto p8err;
+            goto p8err;                          /* Der解码 */
         ret = d2i_PrivateKey(ameth->pkey_id, x, &p, len);
     }
  p8err:

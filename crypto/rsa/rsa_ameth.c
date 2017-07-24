@@ -115,6 +115,7 @@ static int rsa_pub_decode(EVP_PKEY *pkey, X509_PUBKEY *pubkey)
 
 static int rsa_pub_cmp(const EVP_PKEY *a, const EVP_PKEY *b)
 {
+    /* 查看密钥的公共部分是否相等 */
     if (BN_cmp(b->pkey.rsa->n, a->pkey.rsa->n) != 0
         || BN_cmp(b->pkey.rsa->e, a->pkey.rsa->e) != 0)
         return 0;
@@ -126,10 +127,13 @@ static int old_rsa_priv_decode(EVP_PKEY *pkey,
 {
     RSA *rsa;
 
+    /* 解析Der编码的私钥文件 */
     if ((rsa = d2i_RSAPrivateKey(NULL, pder, derlen)) == NULL) {
         RSAerr(RSA_F_OLD_RSA_PRIV_DECODE, ERR_R_RSA_LIB);
         return 0;
     }
+    
+    /* 保存解析结果 */
     EVP_PKEY_assign(pkey, pkey->ameth->pkey_id, rsa);
     return 1;
 }
@@ -942,37 +946,38 @@ static int rsa_cms_encrypt(CMS_RecipientInfo *ri)
 }
 #endif
 
+/* RSA方法, 对应“-----BEGIN RSA PRIVATE KEY-----”标识的私钥 */
 const EVP_PKEY_ASN1_METHOD rsa_asn1_meths[2] = {
     {
-     EVP_PKEY_RSA,
-     EVP_PKEY_RSA,
-     ASN1_PKEY_SIGPARAM_NULL,
+    EVP_PKEY_RSA,            /* ->pkey_id */
+    EVP_PKEY_RSA,            /* ->pkey_base_id */
+    ASN1_PKEY_SIGPARAM_NULL, /* ->pkey_flags */
 
-     "RSA",
-     "OpenSSL RSA method",
+    "RSA",                   /* ->pem_str */
+    "OpenSSL RSA method",    /* ->info */
 
-     rsa_pub_decode,
+    rsa_pub_decode,          /* ->pub_decode() */
      rsa_pub_encode,
      rsa_pub_cmp,
-     rsa_pub_print,
+    rsa_pub_print,           /* ->pub_print() */
 
-     rsa_priv_decode,
+    rsa_priv_decode,         /* ->priv_decode() */
      rsa_priv_encode,
-     rsa_priv_print,
+    rsa_priv_print,          /* ->priv_print() */
 
-     int_rsa_size,
-     rsa_bits,
-     rsa_security_bits,
+    int_rsa_size,            /* ->pkey_size() */
+    rsa_bits,                /* ->pkey_bits() */
+    rsa_security_bits,       /* ->pkey_security_bits() */
 
-     0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,     /* ->param_encode/_missing/_copy/_cmp/_print() */
 
-     rsa_sig_print,
-     int_rsa_free,
-     rsa_pkey_ctrl,
-     old_rsa_priv_decode,
-     old_rsa_priv_encode,
-     rsa_item_verify,
-     rsa_item_sign},
+    rsa_sig_print,        /* ->sig_print() */
+    int_rsa_free,         /* ->pkey_free() */
+    rsa_pkey_ctrl,        /* ->pkey_ctrl() */
+    old_rsa_priv_decode,  /* ->old_priv_decode() */
+    old_rsa_priv_encode,  /* ->old_priv_encode() */
+    rsa_item_verify,      /* ->item_verify() */
+    rsa_item_sign         /* ->item_sign() */},
 
     {
      EVP_PKEY_RSA2,

@@ -2166,6 +2166,7 @@ long SSL_CTX_ctrl(SSL_CTX *ctx, int cmd, long larg, void *parg)
         return ssl_set_version_bound(ctx->method->version, (int)larg,
                                      &ctx->max_proto_version);
     default:
+        /* IMPLEMENT_tls_meth_func()=ssl3_ctx_ctrl() */
         return (ctx->method->ssl_ctx_ctrl(ctx, cmd, larg, parg));
     }
 }
@@ -3672,6 +3673,10 @@ int SSL_CTX_set_default_verify_file(SSL_CTX *ctx)
     return 1;
 }
 
+/* 加载客户端信任的CA证书，从此证书如果能够匹配到服务器端证书，则服务器是
+   可信的；如果匹配不到，则认为服务器端不可信
+
+   当然可信任的CA证书可能有多个 */
 int SSL_CTX_load_verify_locations(SSL_CTX *ctx, const char *CAfile,
                                   const char *CApath)
 {

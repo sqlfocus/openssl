@@ -37,14 +37,16 @@ EVP_PKEY *d2i_PrivateKey(int type, EVP_PKEY **a, const unsigned char **pp,
 #endif
     }
 
+    /* 根据类型，初始化私钥数据结构 */
     if (!EVP_PKEY_set_type(ret, type)) {
         ASN1err(ASN1_F_D2I_PRIVATEKEY, ASN1_R_UNKNOWN_PUBLIC_KEY_TYPE);
         goto err;
     }
 
-    if (!ret->ameth->old_priv_decode ||
+    /* 解析获取私钥 */
+    if (!ret->ameth->old_priv_decode ||   /* rsa_asn1_meths->old_priv_decode=old_rsa_priv_decode() */
         !ret->ameth->old_priv_decode(ret, &p, length)) {
-        if (ret->ameth->priv_decode) {
+        if (ret->ameth->priv_decode) {    /* rsa_priv_decode() */
             EVP_PKEY *tmp;
             PKCS8_PRIV_KEY_INFO *p8 = NULL;
             p8 = d2i_PKCS8_PRIV_KEY_INFO(NULL, &p, length);

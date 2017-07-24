@@ -11,7 +11,7 @@
  * This table MUST be kept in ascening order of the NID each method
  * represents (corresponding to the pkey_id field) as OBJ_bsearch
  * is used to search it.
- */
+ *//* openssl内置的操控非对称加密私钥(ASN.1)文件的方法 */
 static const EVP_PKEY_ASN1_METHOD *standard_methods[] = {
 #ifndef OPENSSL_NO_RSA
     &rsa_asn1_meths[0],

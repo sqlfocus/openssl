@@ -14,13 +14,13 @@
 #include <openssl/pkcs12.h>
 #include <openssl/objects.h>
 
+/* 加载常见的对称加密算法 */
 void openssl_add_all_ciphers_int(void)
 {
-
 #ifndef OPENSSL_NO_DES
-    EVP_add_cipher(EVP_des_cfb());
-    EVP_add_cipher(EVP_des_cfb1());
-    EVP_add_cipher(EVP_des_cfb8());
+    EVP_add_cipher(EVP_des_cfb());       /* 添加des cfb模式算法，此算法的宏定 */
+    EVP_add_cipher(EVP_des_cfb1());      /* 义已经展开，并放置在#if 0 ... #endif */
+    EVP_add_cipher(EVP_des_cfb8());      /* 之间(~/crypto/evp/e_des.c) */
     EVP_add_cipher(EVP_des_ede_cfb());
     EVP_add_cipher(EVP_des_ede3_cfb());
     EVP_add_cipher(EVP_des_ede3_cfb1());

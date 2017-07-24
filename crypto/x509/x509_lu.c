@@ -75,9 +75,9 @@ int X509_LOOKUP_ctrl(X509_LOOKUP *ctx, int cmd, const char *argc, long argl,
 {
     if (ctx->method == NULL)
         return -1;
-    if (ctx->method->ctrl != NULL)
+    if (ctx->method->ctrl != NULL)  /* x509_file_lookup->ctrl=by_file_ctrl() */
         return ctx->method->ctrl(ctx, cmd, argc, argl, ret);
-    else
+    else                            /* x509_dir_lookup->ctrl=dir_ctrl() */
         return 1;
 }
 
@@ -227,14 +227,14 @@ X509_LOOKUP *X509_STORE_add_lookup(X509_STORE *v, X509_LOOKUP_METHOD *m)
             return lu;
         }
     }
-    /* a new one */
+    /* 新建查找方法，并插入 SSL_CTX->cert_store->get_cert_methods 查找方法堆栈 */
     lu = X509_LOOKUP_new(m);
     if (lu == NULL)
         return NULL;
     else {
-        lu->store_ctx = v;
+        lu->store_ctx = v;    /* 回指，建立关联关系 */
         if (sk_X509_LOOKUP_push(v->get_cert_methods, lu))
-            return lu;
+            return lu;        /* 插入查找hash表 */
         else {
             X509_LOOKUP_free(lu);
             return NULL;
@@ -300,7 +300,7 @@ int X509_STORE_add_cert(X509_STORE *ctx, X509 *x)
     obj = X509_OBJECT_new();
     if (obj == NULL)
         return 0;
-    obj->type = X509_LU_X509;
+    obj->type = X509_LU_X509;           /* 可信任证书 */
     obj->data.x509 = x;
     X509_OBJECT_up_ref_count(obj);
 
@@ -310,7 +310,7 @@ int X509_STORE_add_cert(X509_STORE *ctx, X509 *x)
         X509err(X509_F_X509_STORE_ADD_CERT,
                 X509_R_CERT_ALREADY_IN_HASH_TABLE);
         ret = 0;
-    } else {
+    } else {                            /* 加入hash表 */
         added = sk_X509_OBJECT_push(ctx->objs, obj);
         ret = added != 0;
     }
@@ -335,7 +335,7 @@ int X509_STORE_add_crl(X509_STORE *ctx, X509_CRL *x)
     obj = X509_OBJECT_new();
     if (obj == NULL)
         return 0;
-    obj->type = X509_LU_CRL;
+    obj->type = X509_LU_CRL;            /* CRL，吊销的证书 */
     obj->data.crl = x;
     X509_OBJECT_up_ref_count(obj);
 
@@ -344,7 +344,7 @@ int X509_STORE_add_crl(X509_STORE *ctx, X509_CRL *x)
     if (X509_OBJECT_retrieve_match(ctx->objs, obj)) {
         X509err(X509_F_X509_STORE_ADD_CRL, X509_R_CERT_ALREADY_IN_HASH_TABLE);
         ret = 0;
-    } else {
+    } else {                            /* 加入hash表 */
         added = sk_X509_OBJECT_push(ctx->objs, obj);
         ret = added != 0;
     }

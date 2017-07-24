@@ -284,7 +284,7 @@ int X509_check_private_key(const X509 *x, const EVP_PKEY *k)
     xk = X509_get0_pubkey(x);
 
     if (xk)
-        ret = EVP_PKEY_cmp(xk, k);
+        ret = EVP_PKEY_cmp(xk, k);   /* 比对非对称密钥是否匹配 */
     else
         ret = -2;
 

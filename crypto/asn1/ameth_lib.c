@@ -17,6 +17,7 @@
 
 #include "standard_methods.h"
 
+/* 自定义的非对称加密算法 */
 typedef int sk_cmp_fn_type(const char *const *a, const char *const *b);
 static STACK_OF(EVP_PKEY_ASN1_METHOD) *app_methods = NULL;
 
@@ -99,13 +100,18 @@ const EVP_PKEY_ASN1_METHOD *EVP_PKEY_asn1_find(ENGINE **pe, int type)
     return t;
 }
 
+/* 查找非对称密钥算法操作集合，主要用于操控ASN.1格式的私钥 */
 const EVP_PKEY_ASN1_METHOD *EVP_PKEY_asn1_find_str(ENGINE **pe,
                                                    const char *str, int len)
 {
     int i;
     const EVP_PKEY_ASN1_METHOD *ameth;
+
+    /* 修正名字长度 */
     if (len == -1)
         len = strlen(str);
+    
+    /* 查找注册的引擎 */
     if (pe) {
 #ifndef OPENSSL_NO_ENGINE
         ENGINE *e;
@@ -123,11 +129,13 @@ const EVP_PKEY_ASN1_METHOD *EVP_PKEY_asn1_find_str(ENGINE **pe,
 #endif
         *pe = NULL;
     }
+    
+    /* 查找注册的非对称算法, standard_methods + app_methods */
     for (i = 0; i < EVP_PKEY_asn1_get_count(); i++) {
         ameth = EVP_PKEY_asn1_get0(i);
         if (ameth->pkey_flags & ASN1_PKEY_ALIAS)
             continue;
-        if (((int)strlen(ameth->pem_str) == len)
+        if (((int)strlen(ameth->pem_str) == len)  /* 比对名字 */
             && (strncasecmp(ameth->pem_str, str, len) == 0))
             return ameth;
     }

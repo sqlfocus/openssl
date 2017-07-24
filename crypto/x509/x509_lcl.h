@@ -92,23 +92,29 @@ struct x509_lookup_method_st {
 struct x509_lookup_st {
     int init;                   /* have we been started */
     int skip;                   /* don't use us. */
-    X509_LOOKUP_METHOD *method; /* the functions */
-    char *method_data;          /* method data */
-    X509_STORE *store_ctx;      /* who owns us */
+    X509_LOOKUP_METHOD *method; /* 查找方法，如 x509_file_lookup/x509_dir_lookup */
+    char *method_data;          /* 对应x509_dir_lookup时，类型 BY_DIR */
+    X509_STORE *store_ctx;      /* 回指底层对象 SSL_CTX->cert_store, who owns us */
 };
 
 /*
  * This is used to hold everything.  It is used for all certificate
  * validation.  Once we have a certificate chain, the 'verify' function is
  * then called to actually check the cert chain.
- */
+ *//* 客户端存储可信任的CA的证书，以便验证服务器端是否可信 */
 struct x509_store_st {
     /* The following is a cache of trusted certs */
-    int cache;                  /* if true, stash any hits */
-    STACK_OF(X509_OBJECT) *objs; /* Cache of all objects */
+    int cache;                   /* if true, stash any hits */
+    STACK_OF(X509_OBJECT) *objs; /* 以文件加载的可信任证书、吊销证书，Cache of all objects */
+                                 /* <TAKECARE!!!>指定目录时，并没有读取并加载至
+                                                 此，而是将目录名组织在查找方法
+                                                 中->get_cert_methods; 如果->cache=1,
+                                                 后续查找过的目录中的具体证书会加载
+                                                 到->objs */
     /* These are external lookup methods */
-    STACK_OF(X509_LOOKUP) *get_cert_methods;
+    STACK_OF(X509_LOOKUP) *get_cert_methods;   /* 包含的查找方法对象，如 x509_file_lookup/x509_dir_lookup */
     X509_VERIFY_PARAM *param;
+    
     /* Callbacks for various operations */
     /* called to verify a certificate */
     int (*verify) (X509_STORE_CTX *ctx);

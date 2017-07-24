@@ -33,6 +33,7 @@ struct evp_pkey_ctx_st {
 
 #define EVP_PKEY_FLAG_DYNAMIC   1
 
+/* 如 rsa_pkey_meth */
 struct evp_pkey_method_st {
     int pkey_id;
     int flags;
@@ -356,13 +357,13 @@ const EVP_CIPHER *EVP_##cname##_ecb(void) { return &cname##_ecb; }
 /*
  * Type needs to be a bit field Sub-type needs to be for variations on the
  * method, as in, can it do arbitrary encryption....
- */
+ *//* 非对称加密算法的私钥信息结构 */
 struct evp_pkey_st {
-    int type;            /* 类型, EVP_PKEY_RSA */
-    int save_type;
+    int type;            /* 类型, EVP_PKEY_RSA, = ->ameth->pkey_id */
+    int save_type;       /* 保存的类型，一般为->type */
     CRYPTO_REF_COUNT references;
-    const EVP_PKEY_ASN1_METHOD *ameth;  /* 算法API, rsa_asn1_meths */
-    ENGINE *engine;
+    const EVP_PKEY_ASN1_METHOD *ameth;  /* 操控密钥的API, rsa_asn1_meths */
+    ENGINE *engine;      /* 对应的引擎 */
     union {
         void *ptr;
 # ifndef OPENSSL_NO_RSA

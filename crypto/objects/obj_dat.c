@@ -35,6 +35,7 @@ struct added_obj_st {
     ASN1_OBJECT *obj;
 };
 
+/* 自定义添加的对象列表 */
 static int new_nid = NUM_NID;
 static LHASH_OF(ADDED_OBJ) *added = NULL;
 
@@ -244,12 +245,13 @@ ASN1_OBJECT *OBJ_nid2obj(int n)
     }
 }
 
+/* 由对象NID获取对应的short name */
 const char *OBJ_nid2sn(int n)
 {
     ADDED_OBJ ad, *adp;
     ASN1_OBJECT ob;
 
-    if ((n >= 0) && (n < NUM_NID)) {
+    if ((n >= 0) && (n < NUM_NID)) {  /* 从内置映射表 nid_objs[] 获取 */
         if ((n != NID_undef) && (nid_objs[n].nid == NID_undef)) {
             OBJerr(OBJ_F_OBJ_NID2SN, OBJ_R_UNKNOWN_NID);
             return (NULL);
@@ -257,7 +259,7 @@ const char *OBJ_nid2sn(int n)
         return (nid_objs[n].sn);
     } else if (added == NULL)
         return (NULL);
-    else {
+    else {                            /* 从自定义对象表 add[] 获取 */
         ad.type = ADDED_NID;
         ad.obj = &ob;
         ob.nid = n;
@@ -271,12 +273,13 @@ const char *OBJ_nid2sn(int n)
     }
 }
 
+/* 由对象NID获取对应的long name */
 const char *OBJ_nid2ln(int n)
 {
     ADDED_OBJ ad, *adp;
     ASN1_OBJECT ob;
 
-    if ((n >= 0) && (n < NUM_NID)) {
+    if ((n >= 0) && (n < NUM_NID)) { /* 从内置映射表 nid_objs[] 获取 */
         if ((n != NID_undef) && (nid_objs[n].nid == NID_undef)) {
             OBJerr(OBJ_F_OBJ_NID2LN, OBJ_R_UNKNOWN_NID);
             return (NULL);
@@ -284,7 +287,7 @@ const char *OBJ_nid2ln(int n)
         return (nid_objs[n].ln);
     } else if (added == NULL)
         return (NULL);
-    else {
+    else {                           /* 从自定义对象表 add[] 获取 */
         ad.type = ADDED_NID;
         ad.obj = &ob;
         ob.nid = n;

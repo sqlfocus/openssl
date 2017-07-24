@@ -10,13 +10,13 @@
 /* Internal ASN1 structures and functions: not for application use */
 
 /* ASN1 public key method structure */
-
+/* 如 rsa_asn1_meths[] */
 struct evp_pkey_asn1_method_st {
-    int pkey_id;
-    int pkey_base_id;
-    unsigned long pkey_flags;
-    char *pem_str;
-    char *info;
+    int pkey_id;               /* 算法索引 */
+    int pkey_base_id;          /* */
+    unsigned long pkey_flags;  /**/
+    char *pem_str;             /* 算法名 */
+    char *info;                /* 额外描述信息 */
     int (*pub_decode) (EVP_PKEY *pk, X509_PUBKEY *pub);
     int (*pub_encode) (X509_PUBKEY *pub, const EVP_PKEY *pk);
     int (*pub_cmp) (const EVP_PKEY *a, const EVP_PKEY *b);
@@ -80,8 +80,8 @@ extern const EVP_PKEY_ASN1_METHOD siphash_asn1_meth;
 struct asn1_object_st {
     const char *sn, *ln;        /* 名称，short name/long name */
     int nid;                    /* 索引 */
-    int length;
-    const unsigned char *data;  /* data remains const after init */
+    int length;                 /* data[]长度 */
+    const unsigned char *data;  /* 自定义数据，data remains const after init */
     int flags;                  /* Should we free this one */
 };
 
