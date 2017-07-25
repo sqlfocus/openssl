@@ -3635,7 +3635,7 @@ const SSL_CIPHER *ssl3_get_cipher_by_id(uint32_t id)
 /*
  * This function needs to check if the ciphers required are actually
  * available
- */
+ *//* 搜索 ssl3_ciphers[], 获取ID对应的加密套件 */
 const SSL_CIPHER *ssl3_get_cipher_by_char(const unsigned char *p)
 {
     return ssl3_get_cipher_by_id(SSL3_CK_CIPHERSUITE_FLAG

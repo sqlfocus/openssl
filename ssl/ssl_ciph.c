@@ -1919,6 +1919,7 @@ int ssl_cipher_get_cert_index(const SSL_CIPHER *c)
 const SSL_CIPHER *ssl_get_cipher_by_char(SSL *ssl, const unsigned char *ptr,
                                          int all)
 {
+    /* =ssl3_get_cipher_by_char() */
     const SSL_CIPHER *c = ssl->method->get_cipher_by_char(ptr);
 
     if (c == NULL || (!all && c->valid == 0))

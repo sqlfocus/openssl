@@ -287,11 +287,13 @@ static int asn1_item_embed_d2i(ASN1_VALUE **pval, const unsigned char **in,
             goto err;
         }
 
+        /* 分配 RSA 私钥结构体，并赋值给*pval  */
         if (!*pval && !ASN1_item_ex_new(pval, it)) {
             ASN1err(ASN1_F_ASN1_ITEM_EMBED_D2I, ERR_R_NESTED_ASN1_ERROR);
             goto err;
         }
 
+        /* 对于RSA，调用 rsa_cb() */
         if (asn1_cb && !asn1_cb(ASN1_OP_D2I_PRE, pval, it, NULL))
             goto auxerr;
 
@@ -308,15 +310,15 @@ static int asn1_item_embed_d2i(ASN1_VALUE **pval, const unsigned char **in,
             }
         }
 
-        /* Get each field entry */
+        /* 按照模板解析，并将值放入pval, Get each field entry */
         for (i = 0, tt = it->templates; i < it->tcount; i++, tt++) {
             const ASN1_TEMPLATE *seqtt;
             ASN1_VALUE **pseqval;
-            seqtt = asn1_do_adb(pval, tt, 1);
+            seqtt = asn1_do_adb(pval, tt, 1);     /* 利用Der编码值初始化模板 */
             if (seqtt == NULL)
                 goto err;
             pseqval = asn1_get_field_ptr(pval, seqtt);
-            /* Have we ran out of data? */
+            /* Have we ran out of data? */        /* 获取应该写入的pval的偏移 */
             if (!len)
                 break;
             q = p;
@@ -345,7 +347,7 @@ static int asn1_item_embed_d2i(ASN1_VALUE **pval, const unsigned char **in,
              */
 
             ret = asn1_template_ex_d2i(pseqval, &p, len, seqtt, isopt, ctx);
-            if (!ret) {
+            if (!ret) {                           /* 写入偏移 */
                 errtt = seqtt;
                 goto err;
             } else if (ret == -1) {

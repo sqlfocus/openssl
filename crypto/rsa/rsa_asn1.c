@@ -18,7 +18,7 @@
 static int rsa_cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it,
                   void *exarg)
 {
-    if (operation == ASN1_OP_NEW_PRE) {
+    if (operation == ASN1_OP_NEW_PRE) {   /* 分配RSA私钥结构体，并初始化 RSA->meth */
         *pval = (ASN1_VALUE *)RSA_new();
         if (*pval != NULL)
             return 2;

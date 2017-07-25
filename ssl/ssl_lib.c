@@ -4780,7 +4780,7 @@ int bytes_to_cipher_list(SSL *s, PACKET *cipher_suites,
         if (sslv2format && cipher[0] != '\0')
             continue;
 
-        /* For SSLv2-compat, ignore leading 0-byte. */
+        /* 获取加密套件，For SSLv2-compat, ignore leading 0-byte. */
         c = ssl_get_cipher_by_char(s, sslv2format ? &cipher[1] : cipher, 1);
         if (c != NULL) {
             if ((c->valid && !sk_SSL_CIPHER_push(sk, c)) ||

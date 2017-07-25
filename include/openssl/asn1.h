@@ -208,7 +208,8 @@ DEFINE_STACK_OF(ASN1_STRING_TABLE)
  */
 typedef struct ASN1_TEMPLATE_st ASN1_TEMPLATE;
 typedef struct ASN1_TLC_st ASN1_TLC;
-/* This is just an opaque pointer */
+/* <TAKECARE!!!>并没有实际的结构定义；可以理解为void???
+   This is just an opaque pointer */
 typedef struct ASN1_VALUE_st ASN1_VALUE;
 
 /* Declare ASN1 functions: the implement macro in in asn1t.h */

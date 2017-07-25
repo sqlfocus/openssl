@@ -86,7 +86,7 @@ RSA *RSA_new_method(ENGINE *engine)
         return NULL;
     }
 
-    ret->meth = RSA_get_default_method();
+    ret->meth = RSA_get_default_method();   /* 获取默认方法 rsa_pkcs1_ossl_meth */
 #ifndef OPENSSL_NO_ENGINE
     ret->flags = ret->meth->flags & ~RSA_FLAG_NON_FIPS_ALLOW;
     if (engine) {

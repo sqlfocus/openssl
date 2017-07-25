@@ -40,6 +40,7 @@ int RSA_private_encrypt(int flen, const unsigned char *from,
 int RSA_private_decrypt(int flen, const unsigned char *from,
                         unsigned char *to, RSA *rsa, int padding)
 {
+    /* rsa_pkcs1_ossl_meth->rsa_priv_dec=rsa_ossl_private_decrypt() */
     return (rsa->meth->rsa_priv_dec(flen, from, to, rsa, padding));
 }
 

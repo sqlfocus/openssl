@@ -672,7 +672,7 @@ typedef struct raw_extension_st {
 
 /* ClientHello消息 */
 typedef struct {
-    unsigned int isv2;           /* 是否未SSL2 */
+    unsigned int isv2;           /* 是否为SSL2 */
     unsigned int legacy_version; /* 客户端推荐的TLS版本 */
     unsigned char random[SSL3_RANDOM_SIZE];  /* 客户端随机数 */
     size_t session_id_len;                   /* 会话，以支持会话恢复 */
@@ -994,7 +994,7 @@ struct ssl_st {
      */
     int rwstate;                           /* 暂存当前读、写状态，以便于非阻塞恢复 */
     int (*handshake_func) (SSL *);         /* SSL握手函数，根据->server角色决定执行函数, 
-                                              ossl_statem_accept()/ossl_statem_connect() */
+                                              SSL_CTX_newossl_statem_accept()/ossl_statem_connect() */
     /*
      * Imagine that here's a boolean member "init" that is switched as soon
      * as SSL_set_{accept/connect}_state is called for the first time, so
@@ -1361,7 +1361,7 @@ typedef struct ssl3_state_st {
         size_t message_size;   /* 当前处理的消息长度 */
         int message_type;      /* 当前处理的消息类型, SSL3_MT_CLIENT_HELLO */
         /* used to hold the new cipher we are going to use */
-        const SSL_CIPHER *new_cipher;   /* 最终选择的加解密套件 */
+        const SSL_CIPHER *new_cipher;   /* 最终选择的加解密套件, 选自 ssl3_ciphers[] */
 # if !defined(OPENSSL_NO_EC) || !defined(OPENSSL_NO_DH)
         EVP_PKEY *pkey;         /* holds short lived DH/ECDH key */
 # endif

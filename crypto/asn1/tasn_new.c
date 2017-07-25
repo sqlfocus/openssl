@@ -48,7 +48,7 @@ int asn1_item_embed_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int embed)
     ASN1_VALUE **pseqval;
     int i;
     if (aux && aux->asn1_cb)
-        asn1_cb = aux->asn1_cb;
+        asn1_cb = aux->asn1_cb;  /* RSAPrivateKey_aux->ans1_cb=rsa_cb() */
     else
         asn1_cb = 0;
 
@@ -105,11 +105,11 @@ int asn1_item_embed_new(ASN1_VALUE **pval, const ASN1_ITEM *it, int embed)
 
     case ASN1_ITYPE_NDEF_SEQUENCE:
     case ASN1_ITYPE_SEQUENCE:
-        if (asn1_cb) {
+        if (asn1_cb) {  /* =rsa_cb() */
             i = asn1_cb(ASN1_OP_NEW_PRE, pval, it, NULL);
-            if (!i)
+            if (!i)        /* 分配RSA结构，并设置其操控函数集合 */
                 goto auxerr;
-            if (i == 2) {
+            if (i == 2) {  /* 分配成功，直接退出 */
 #ifndef OPENSSL_NO_CRYPTO_MDEBUG
                 OPENSSL_mem_debug_pop();
 #endif

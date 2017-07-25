@@ -1248,7 +1248,8 @@ static void ssl_check_for_safari(SSL *s, const CLIENTHELLO_MSG *hello)
 }
 #endif                          /* !OPENSSL_NO_EC */
 
-/* 服务器处理ClientHello消息，结果保存到 SSL->clienthello */
+/* 服务器处理ClientHello消息，结果保存到 SSL->clienthello；
+   进入此函数时，已经解析出了握手类型(ClientHello)、总长度 */
 MSG_PROCESS_RETURN tls_process_client_hello(SSL *s, PACKET *pkt)
 {
     int al = SSL_AD_INTERNAL_ERROR;
@@ -1717,7 +1718,7 @@ static int tls_early_post_process_client_hello(SSL *s, int *al)
         ssl_check_for_safari(s, clienthello);
 #endif                          /* !OPENSSL_NO_EC */
 
-    /* TLS extensions */
+    /* 解析拓展选项，TLS extensions */
     if (!tls_parse_all_extensions(s, EXT_CLIENT_HELLO,
                                   clienthello->pre_proc_exts, NULL, 0, al)) {
         SSLerr(SSL_F_TLS_EARLY_POST_PROCESS_CLIENT_HELLO, SSL_R_PARSE_TLSEXT);
@@ -2712,7 +2713,7 @@ static int tls_process_cke_rsa(SSL *s, PACKET *pkt, int *al)
 
     /* Check the padding. See RFC 3447, section 7.2.2. */
 
-    /* 验证填充数据 */
+    /* 验证填充数据，RFC3447 7.2.2 */
     /*
      * The smallest padded premaster is 11 bytes of overhead. Small keys
      * are publicly invalid, so this may return immediately. This ensures
@@ -2739,7 +2740,7 @@ static int tls_process_cke_rsa(SSL *s, PACKET *pkt, int *al)
      * (http://eprint.iacr.org/2003/052/) exploits the version number
      * check as a "bad version oracle". Thus version checks are done in
      * constant time and are treated like any other decryption error.
-     */
+     *//* 48字节的数据，前两个为已经协商好的版本号，防止降级攻击 */
     version_good =
         constant_time_eq_8(rsa_decrypt[padding_len],
                            (unsigned)(s->client_version >> 8));
@@ -2755,7 +2756,7 @@ static int tls_process_cke_rsa(SSL *s, PACKET *pkt, int *al)
      * version instead if the server does not support the requested
      * protocol version. If SSL_OP_TLS_ROLLBACK_BUG is set, tolerate such
      * clients.
-     */
+     *//* 如果协商的版本服务器不支持，有的客户端在此消息携带的版本为客户端发起协商的版本 */
     if (s->options & SSL_OP_TLS_ROLLBACK_BUG) {
         unsigned char workaround_good;
         workaround_good = constant_time_eq_8(rsa_decrypt[padding_len],
@@ -2777,7 +2778,9 @@ static int tls_process_cke_rsa(SSL *s, PACKET *pkt, int *al)
      * decrypt_good_mask. If decryption failed, then p does not
      * contain valid plaintext, however, a check above guarantees
      * it is still sufficiently large to read from.
-     */
+     *//* 如果pre_master_secret消息格式错误，为避免暴露处理错误，后续利用服务器
+          自身生成的随机串当作pre_master_secret；这样，使得程序处理流程一致，避
+          免攻击 */
     for (j = 0; j < sizeof(rand_premaster_secret); j++) {
         rsa_decrypt[padding_len + j] =
             constant_time_select_8(decrypt_good,
@@ -2785,7 +2788,7 @@ static int tls_process_cke_rsa(SSL *s, PACKET *pkt, int *al)
                                    rand_premaster_secret[j]);
     }
 
-    /* 产生会话密钥 */
+    /* 产生master key，用于产生会话密钥、MAC密钥等 */
     if (!ssl_generate_master_secret(s, rsa_decrypt + padding_len,
                                     sizeof(rand_premaster_secret), 0)) {
         *al = SSL_AD_INTERNAL_ERROR;
