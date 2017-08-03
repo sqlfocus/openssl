@@ -154,7 +154,7 @@ typedef struct record_layer_st {
     /* each decoded record goes in here */
     SSL3_RECORD rrec[SSL_MAX_PIPELINES];   /* 记录描述信息 */
     /* used internally to point at a raw packet */
-    unsigned char *packet;    /* =&rbuf->buf[0] */
+    unsigned char *packet;                 /* =&rbuf->buf[0] */
     size_t packet_length;
     /* number of bytes sent so far */
     size_t wnum;

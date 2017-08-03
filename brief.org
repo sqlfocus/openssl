@@ -350,9 +350,6 @@ const EVP_CIPHER *EVP_des_ecb(void) { return &des_ecb; }
   -ssl_create_cipher_list()                 加载支持的加密套件，~/ssl/ssl_ciph.c
 #+END_EXAMPLE
 
-* TODO SSL_READ/WRITE
-AB
-
 * 全局变量
  - ssl3_ciphers[]
    : ~/ssl/s3_lib.c

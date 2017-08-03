@@ -1578,15 +1578,16 @@ int ssl_read_internal(SSL *s, void *buf, size_t num, size_t *readbytes)
         ret = ssl_start_async_job(s, &args, ssl_io_intern);
         *readbytes = s->asyncrw;
         return ret;
-    } else {
-        return s->method->ssl_read(s, buf, num, readbytes); /* ssl3_read() */
+    } else {  /* TLS_method() */
+        return s->method->ssl_read(s, buf, num, readbytes); /* =ssl3_read() */
     }
 }
 
+/* 读取SSL层数据API接口，<TAKECARE!!!>调用此函数时，有可能尚未开始握手 */
 int SSL_read(SSL *s, void *buf, int num)
 {
     int ret;
-    size_t readbytes;
+    size_t readbytes;   /* 成功读取的字节数 */
 
     if (num < 0) {
         SSLerr(SSL_F_SSL_READ, SSL_R_BAD_LENGTH);
@@ -1599,7 +1600,7 @@ int SSL_read(SSL *s, void *buf, int num)
      * The cast is safe here because ret should be <= INT_MAX because num is
      * <= INT_MAX
      */
-    if (ret > 0)
+    if (ret > 0)        /* 成功返回值 */
         ret = (int)readbytes;
 
     return ret;
@@ -1774,6 +1775,7 @@ int ssl_write_internal(SSL *s, const void *buf, size_t num, size_t *written)
     }
 }
 
+/* 通过SSL层发送数据API接口，<TAKECARE!!!>调用此函数时，有可能尚未开始握手 */
 int SSL_write(SSL *s, const void *buf, int num)
 {
     int ret;

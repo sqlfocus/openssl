@@ -1265,7 +1265,7 @@ struct ssl_st {
      * basis, depending on the chosen cipher.
      */
     int (*not_resumable_session_cb) (SSL *ssl, int is_forward_secure);
-    RECORD_LAYER rlayer;            /* 跟踪记录信息 */
+    RECORD_LAYER rlayer;            /* 跟踪读取的记录信息 */
     /* Default password callback. */
     pem_password_cb *default_passwd_callback;
     /* Default password callback user data. */
