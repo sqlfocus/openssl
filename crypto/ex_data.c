@@ -28,7 +28,7 @@ struct ex_callback_st {
  * a structure allows future changes.
  *//* 自定义应用数据操控函数集合 */
 typedef struct ex_callbacks_st {
-    STACK_OF(EX_CALLBACK) *meth;
+    STACK_OF(EX_CALLBACK) *meth;   /* 插入自定义数据描述结构, struct ex_callback_st */
 } EX_CALLBACKS;
 static EX_CALLBACKS ex_data[CRYPTO_EX_INDEX__COUNT];
 
@@ -48,7 +48,7 @@ DEFINE_RUN_ONCE_STATIC(do_ex_data_init)
 /*
  * Return the EX_CALLBACKS from the |ex_data| array that corresponds to
  * a given class.  On success, *holds the lock.*
- *//* 返回对应类别的操控函数集合 */
+ *//* 返回对应类别的自定义数据堆栈 */
 static EX_CALLBACKS *get_and_lock(int class_index)
 {
     EX_CALLBACKS *ip;
@@ -152,7 +152,13 @@ err:
 
 /*
  * Register a new index.
- */
+ *//* 注册自定义私有数据，并返回其索引 
+      @param class_index: 数据类别, CRYPTO_EX_INDEX_SSL(SSL对象私有数据)
+      @param argl: 
+      @param argp:
+      @param new_func:
+      @param dup_func:
+      @param free_func: */
 int CRYPTO_get_ex_new_index(int class_index, long argl, void *argp,
                             CRYPTO_EX_new *new_func, CRYPTO_EX_dup *dup_func,
                             CRYPTO_EX_free *free_func)
@@ -160,14 +166,17 @@ int CRYPTO_get_ex_new_index(int class_index, long argl, void *argp,
     int toret = -1;
     EX_CALLBACK *a;
     EX_CALLBACKS *ip = get_and_lock(class_index);
-
+    
     if (ip == NULL)
         return -1;
 
+    /* 堆栈尚未初始化，初始化此类型堆栈 */
     if (ip->meth == NULL) {
         ip->meth = sk_EX_CALLBACK_new_null();
+        
         /* We push an initial value on the stack because the SSL
          * "app_data" routines use ex_data index zero.  See RT 3710. */
+        /* 第一个元素为NULL，索引为0 */
         if (ip->meth == NULL
             || !sk_EX_CALLBACK_push(ip->meth, NULL)) {
             CRYPTOerr(CRYPTO_F_CRYPTO_GET_EX_NEW_INDEX, ERR_R_MALLOC_FAILURE);
@@ -175,6 +184,7 @@ int CRYPTO_get_ex_new_index(int class_index, long argl, void *argp,
         }
     }
 
+    /* 分配结构 struct ex_callback_st, 插入堆栈 */
     a = (EX_CALLBACK *)OPENSSL_malloc(sizeof(*a));
     if (a == NULL) {
         CRYPTOerr(CRYPTO_F_CRYPTO_GET_EX_NEW_INDEX, ERR_R_MALLOC_FAILURE);
@@ -191,12 +201,12 @@ int CRYPTO_get_ex_new_index(int class_index, long argl, void *argp,
         OPENSSL_free(a);
         goto err;
     }
-    toret = sk_EX_CALLBACK_num(ip->meth) - 1;
-    (void)sk_EX_CALLBACK_set(ip->meth, toret, a);
+    toret = sk_EX_CALLBACK_num(ip->meth) - 1;       /* 获取索引 */
+    (void)sk_EX_CALLBACK_set(ip->meth, toret, a);   /* 赋值，栈元素为数据指针 */
 
  err:
     CRYPTO_THREAD_unlock(ex_data_lock);
-    return toret;
+    return toret;                                   /* 返回值为索引 */
 }
 
 /*
@@ -364,6 +374,7 @@ int CRYPTO_set_ex_data(CRYPTO_EX_DATA *ad, int idx, void *val)
 {
     int i;
 
+    /* 数据堆栈未初始化 */
     if (ad->sk == NULL) {
         if ((ad->sk = sk_void_new_null()) == NULL) {
             CRYPTOerr(CRYPTO_F_CRYPTO_SET_EX_DATA, ERR_R_MALLOC_FAILURE);
@@ -371,13 +382,17 @@ int CRYPTO_set_ex_data(CRYPTO_EX_DATA *ad, int idx, void *val)
         }
     }
 
+    /* 需连续插入，中间间隔的数据利用NULL填充 */
     for (i = sk_void_num(ad->sk); i <= idx; ++i) {
         if (!sk_void_push(ad->sk, NULL)) {
             CRYPTOerr(CRYPTO_F_CRYPTO_SET_EX_DATA, ERR_R_MALLOC_FAILURE);
             return 0;
         }
     }
+    
+    /* 在指定索引保存对应的应用数据 */
     sk_void_set(ad->sk, idx, val);
+    
     return 1;
 }
 
@@ -387,7 +402,10 @@ int CRYPTO_set_ex_data(CRYPTO_EX_DATA *ad, int idx, void *val)
  */
 void *CRYPTO_get_ex_data(const CRYPTO_EX_DATA *ad, int idx)
 {
+    /* 索引检索 */
     if (ad->sk == NULL || idx >= sk_void_num(ad->sk))
         return NULL;
+    
+    /* 返回索引处的值 */
     return sk_void_value(ad->sk, idx);
 }

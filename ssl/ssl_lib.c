@@ -3741,11 +3741,17 @@ size_t SSL_SESSION_get_master_key(const SSL_SESSION *session,
     return outlen;
 }
 
+/* 设置某对象对应的具体索引的私有数据
+   @param s: SSL对象
+   @param idx: 索引，由 SSL_get_ex_new_index() 获取
+   @param arg: 私有数据指针 */
 int SSL_set_ex_data(SSL *s, int idx, void *arg)
 {
     return (CRYPTO_set_ex_data(&s->ex_data, idx, arg));
 }
-
+/* 获取某对象对应的具体索引的私有数据
+   @param s: SSL对象
+   @param idx: 索引，由 SSL_get_ex_new_index() 获取 */
 void *SSL_get_ex_data(const SSL *s, int idx)
 {
     return (CRYPTO_get_ex_data(&s->ex_data, idx));

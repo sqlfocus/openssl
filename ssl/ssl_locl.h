@@ -557,7 +557,7 @@ struct ssl_session_st {
     unsigned long cipher_id;    /* when ASN.1 loaded, this needs to be used to
                                  * load the 'cipher' structure */
     STACK_OF(SSL_CIPHER) *ciphers; /* shared ciphers? */
-    CRYPTO_EX_DATA ex_data;     /* application specific data */
+    CRYPTO_EX_DATA ex_data;     /* 存储私有的应用数据, SSL_SESSION_set_ex_data/SSL_SESSION_get_ex_data() */
     /*
      * These are used to make removal of session-ids more efficient and to
      * implement a maximum cache size.
@@ -777,7 +777,7 @@ struct ssl_ctx_st {
     int (*app_verify_cookie_cb) (SSL *ssl, const unsigned char *cookie,
                                  unsigned int cookie_len);
 
-    CRYPTO_EX_DATA ex_data;
+    CRYPTO_EX_DATA ex_data;     /* 存储私有的应用数据, SSL_CTX_set_ex_data/SSL_CTX_get_ex_data() */
 
     const EVP_MD *md5;          /* For SSLv3/TLSv1 'ssl3-md5' */
     const EVP_MD *sha1;         /* For SSLv3/TLSv1 'ssl3->sha1' */
@@ -1112,7 +1112,7 @@ struct ssl_st {
     STACK_OF(X509) *verified_chain;
     long verify_result;
     /* extra application data */
-    CRYPTO_EX_DATA ex_data;
+    CRYPTO_EX_DATA ex_data;     /* 存储私有的应用数据, SSL_set_ex_data/SSL_get_ex_data() */
     /* for server side, keep the list of CA_dn we can use */
     STACK_OF(X509_NAME) *client_CA;
     CRYPTO_REF_COUNT references;

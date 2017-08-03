@@ -50,13 +50,12 @@ int main(int argc, char**argv)
 }
 #+END_EXAMPLE
 
-* TODO 自定义数据
+* 自定义数据
  - SSL_get_ex_new_index()
+ - SSL_set_ex_data()
+ - SSL_get_ex_data()
    : ~/include/openssl/ssl.h
-   : 
- - SSL_CTX_get_ex_new_index()
- - SSL_CTX_set_ex_data()
- - X509_get_ex_new_index()
+   : 注册自定义数据索引, 并在具体SSL对象(SSL->ex_data)附着、获取此索引对应的数据
 
 * 代码组织
  - apps                   :: 命令行程序

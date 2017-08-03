@@ -1788,7 +1788,7 @@ __owur size_t SSL_get_server_random(const SSL *ssl, unsigned char *out,
 __owur size_t SSL_SESSION_get_master_key(const SSL_SESSION *ssl,
                                          unsigned char *out, size_t outlen);
     
-/* 获取附加到内部数据结构的自定义应用数据 */
+/* 获取自定义私有的应用数据 */
 #define SSL_get_ex_new_index(l, p, newf, dupf, freef) \
     CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_SSL, l, p, newf, dupf, freef)
 __owur int SSL_set_ex_data(SSL *ssl, int idx, void *data);
