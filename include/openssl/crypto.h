@@ -88,7 +88,7 @@ int CRYPTO_atomic_add(int *val, int amount, int *ret, CRYPTO_RWLOCK *lock);
 # define CRYPTO_MEM_CHECK_ENABLE  0x2   /* Control and mode bit */
 # define CRYPTO_MEM_CHECK_DISABLE 0x3   /* Control only */
 
-    /* 自定义void类型堆栈，用于存放私有数据 */
+/* 自定义void类型堆栈，用于存放应用数据 */
 struct crypto_ex_data_st {
     STACK_OF(void) *sk;
 };
@@ -96,7 +96,7 @@ DEFINE_STACK_OF(void)
 
 /*
  * Per class, we have a STACK of function pointers.
- *//* 栈类别 */
+ *//* 栈类别，存储应用数据 */
 # define CRYPTO_EX_INDEX_SSL              0
 # define CRYPTO_EX_INDEX_SSL_CTX          1
 # define CRYPTO_EX_INDEX_SSL_SESSION      2

@@ -30,12 +30,12 @@
 extern "C" {
 #endif
 
+/* 自定义堆栈，存储用户自定义应用私有数据 */    
 typedef struct ex_callback_st EX_CALLBACK;
+DEFINE_STACK_OF(EX_CALLBACK)   
 
-DEFINE_STACK_OF(EX_CALLBACK)
 
 typedef struct app_mem_info_st APP_INFO;
-
 typedef struct mem_st MEM;
 DEFINE_LHASH_OF(MEM);
 

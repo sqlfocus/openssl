@@ -1686,6 +1686,7 @@ int s_client_main(int argc, char **argv)
 
     ssl_ctx_add_crls(ctx, crls, crl_download);
 
+    /* 加载提供的私钥、公钥，用于被服务器端认证 */
     if (!set_cert_key_stuff(ctx, cert, key, chain, build_chain))
         goto end;
 

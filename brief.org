@@ -5,6 +5,59 @@
 本系列文档摘录openssl的内部实现，以期深入了解SSL的交互流程，及与加速卡
 的整合流程！
 
+* 自定义堆栈
+openssl采用宏实现自定义类型堆栈及其操控函数的定义，见文件~/include/openssl/
+safestack.h; 而具体的实现见文件~/crypto/stack/stack.c
+ - DEFINE_SPECIAL_STACK_OF()
+ - DEFINE_STACK_OF()
+ - STACK_OF()
+
+在openssl内部，并没有为每种类型的堆栈实现一套单独的操控函数，而是仅仅拥有一
+套核心操控，比如计数、提取某元素、插入、排序等，其元素类型为OPENSSL_STACK；
+而通过宏展开的自定义堆栈，仅仅是核心操控堆栈的包装。
+
+此处利用了一个c语言技巧，可以声明一个类型(STACK_OF(xxx))，但不提供具体定义；
+使用时，强制类型转换为通用类型(OPENSSL_STACK)，并利用通用函数操控。
+
+#+BEGIN_EXAMPLE
+#include <stdio.h>
+#include <stdlib.h>
+
+struct NONE_EXIST_VAR;
+
+typedef struct real_st {
+    int a;
+    int b;
+}ST;
+
+void chg(struct NONE_EXIST_VAR *p) {
+    ST *tmp = (ST *)p;
+    int var = tmp->a;
+    
+    tmp->a = tmp->b;
+    tmp->b = var;
+}
+
+int main(int argc, char**argv)
+{
+    struct NONE_EXIST_VAR *tmp_p;
+    ST obj = {1, 2};
+
+    tmp_p = (struct NONE_EXIST_VAR *)&obj;
+    chg(tmp_p);
+    printf("obj.a=%d, obj.b=%d\n", obj.a, obj.b);
+    return 0;
+}
+#+END_EXAMPLE
+
+* TODO 自定义数据
+ - SSL_get_ex_new_index()
+   : ~/include/openssl/ssl.h
+   : 
+ - SSL_CTX_get_ex_new_index()
+ - SSL_CTX_set_ex_data()
+ - X509_get_ex_new_index()
+
 * 代码组织
  - apps                   :: 命令行程序
  - crypto                 :: 加解密算法库
@@ -298,6 +351,9 @@ const EVP_CIPHER *EVP_des_ecb(void) { return &des_ecb; }
   -ssl_create_cipher_list()                 加载支持的加密套件，~/ssl/ssl_ciph.c
 #+END_EXAMPLE
 
+* TODO SSL_READ/WRITE
+AB
+
 * 全局变量
  - ssl3_ciphers[]
    : ~/ssl/s3_lib.c
@@ -334,4 +390,11 @@ const EVP_CIPHER *EVP_des_ecb(void) { return &des_ecb; }
 
 
 
+
+
+
+
+
+
+* TODO tickets
 

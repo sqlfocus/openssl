@@ -994,7 +994,7 @@ struct ssl_st {
      */
     int rwstate;                           /* 暂存当前读、写状态，以便于非阻塞恢复 */
     int (*handshake_func) (SSL *);         /* SSL握手函数，根据->server角色决定执行函数, 
-                                              SSL_CTX_newossl_statem_accept()/ossl_statem_connect() */
+                                              ossl_statem_accept()/ossl_statem_connect() */
     /*
      * Imagine that here's a boolean member "init" that is switched as soon
      * as SSL_set_{accept/connect}_state is called for the first time, so

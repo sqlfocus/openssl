@@ -7,6 +7,43 @@
  * https://www.openssl.org/source/license.html
  */
 
+/* 本文件仅提供通用STACK的声明，及包装操控函数，而操控函数的具体核心实
+   现则在文件~/crypto/stack/stack.c
+
+   <TAKECARE!!!>此处利用了一个c语言技巧，可以声明一个类型(STACK_OF(xxx))，
+                但不提供具体定义；使用时，强制类型转换为通用类型(OPENSSL_STACK)，
+                并操控。
+
+   <NOTE!!!>技巧示例
+#include <stdio.h>
+#include <stdlib.h>
+
+struct NONE_EXIST_VAR;
+
+typedef struct real_st {
+    int a;
+    int b;
+}ST;
+
+void chg(struct NONE_EXIST_VAR *p) {
+    ST *tmp = (ST *)p;
+    int var = tmp->a;
+    
+    tmp->a = tmp->b;
+    tmp->b = var;
+}
+
+int main(int argc, char**argv)
+{
+    struct NONE_EXIST_VAR *tmp_p;
+    ST obj = {1, 2};
+
+    tmp_p = (struct NONE_EXIST_VAR *)&obj;
+    chg(tmp_p);
+    printf("obj.a=%d, obj.b=%d\n", obj.a, obj.b);
+    return 0;
+}
+*/
 #ifndef HEADER_SAFESTACK_H
 # define HEADER_SAFESTACK_H
 
@@ -17,7 +54,7 @@
 extern "C" {
 #endif
 
-    /* 定义自定义栈类型；基础栈数据结构 struct stack_st */
+    /* 声明自定义栈类型；基础栈数据结构 struct stack_st */
 # define STACK_OF(type) struct stack_st_##type
 
     /* 自定义栈操控函数集合的封装宏

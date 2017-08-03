@@ -14,7 +14,7 @@
 /*
  * Each structure type (sometimes called a class), that supports
  * exdata has a stack of callbacks for each instance.
- *//* */
+ *//* 定义应用数据的操控函数 */
 struct ex_callback_st {
     long argl;                  /* Arbitrary long */
     void *argp;                 /* Arbitrary void * */
@@ -26,7 +26,7 @@ struct ex_callback_st {
 /*
  * The state for each class.  This could just be a typedef, but
  * a structure allows future changes.
- *//* 自定义操控集合 */
+ *//* 自定义应用数据操控函数集合 */
 typedef struct ex_callbacks_st {
     STACK_OF(EX_CALLBACK) *meth;
 } EX_CALLBACKS;
