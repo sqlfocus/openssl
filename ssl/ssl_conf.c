@@ -705,7 +705,7 @@ int SSL_CONF_cmd(SSL_CONF_CTX *cctx, const char *cmd, const char *value)
         }
         if (value == NULL)
             return -3;
-        rv = runcmd->cmd(cctx, value);
+        rv = runcmd->cmd(cctx, value);  /* 如选项"-cipher" = cmd_CipherString() */
         if (rv > 0)
             return 2;
         if (rv == -2)

@@ -804,7 +804,7 @@ struct ssl_ctx_st {
     int max_proto_version;
     size_t max_cert_list;
 
-    struct cert_st /* CERT */ *cert;    /* 非对成密钥信息 */
+    struct cert_st /* CERT */ *cert;    /* 非对称密钥信息 */
     int read_ahead;
 
     /* callback that allows applications to peek at protocol messages */
@@ -1693,7 +1693,8 @@ typedef struct cert_st {
      * appropriate parameters and setup any certificates required. This
      * allows advanced applications to select certificates on the fly: for
      * example based on supported signature algorithms or curves.
-     */
+     *//* 可通过 SSL_CTX_set_cert_cb() 设定，创建SSL对象时被继承，以便于手工
+          指定证书链及私钥 */
     int (*cert_cb) (SSL *ssl, void *arg);
     void *cert_cb_arg;
     /*

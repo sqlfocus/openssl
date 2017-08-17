@@ -91,7 +91,7 @@ extern const EVP_PKEY_METHOD hkdf_pkey_meth;
 extern const EVP_PKEY_METHOD poly1305_pkey_meth;
 extern const EVP_PKEY_METHOD siphash_pkey_meth;
 
-/* 摘要算法套件信息结构 */
+/* 摘要算法套件信息结构, md5_md */
 struct evp_md_st {
     int type;           /* 摘要算法NID */
     int pkey_type;      /* 签名算法NID */

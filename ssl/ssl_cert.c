@@ -965,6 +965,7 @@ int ssl_security(const SSL *s, int op, int bits, int nid, void *other)
 
 int ssl_ctx_security(const SSL_CTX *ctx, int op, int bits, int nid, void *other)
 {
+    /* = ssl_security_default_callback() */
     return ctx->cert->sec_cb(NULL, ctx, op, bits, nid, other,
                              ctx->cert->sec_ex);
 }

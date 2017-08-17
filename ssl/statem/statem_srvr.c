@@ -1975,7 +1975,7 @@ WORK_STATE tls_post_process_client_hello(SSL *s, WORK_STATE wst)
             if (s->cert->cert_cb) {
                 int rv = s->cert->cert_cb(s, s->cert->cert_cb_arg);
                 if (rv == 0) {
-                    al = SSL_clienthelloAD_INTERNAL_ERROR;
+                    al = SSL_AD_INTERNAL_ERROR;
                     SSLerr(SSL_F_TLS_POST_PROCESS_CLIENT_HELLO,
                            SSL_R_CERT_CB_ERROR);
                     goto f_err;

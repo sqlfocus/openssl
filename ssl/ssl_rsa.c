@@ -539,7 +539,6 @@ int SSL_CTX_use_PrivateKey_file(SSL_CTX *ctx, const char *file, int type)
         SSLerr(SSL_F_SSL_CTX_USE_PRIVATEKEY_FILE, ERR_R_BUF_LIB);
         goto end;
     }
-
     if (BIO_read_filename(in, file) <= 0) {
         SSLerr(SSL_F_SSL_CTX_USE_PRIVATEKEY_FILE, ERR_R_SYS_LIB);
         goto end;
